@@ -1,0 +1,16 @@
+py -m PyInstaller --onefile --noconsole --icon="L:\Scripting\DeltaGizmo\dpg.ico" L:\Scripting\DeltaGizmo\DPGToolboxV2.py
+py -m PyInstaller -F --noconsole --icon="L:\Scripting\DeltaGizmo\dpg.ico" L:\Scripting\DeltaGizmo\DPGToolboxV2.py
+
+
+------------------
+***  THIS ONE  ***
+
+MUST IMPORT ALL NEEDED MODULES INSIDE OF MAIN.PY BUT IT WORKS
+
+py -m PyInstaller --name=CitraBox --noconsole --icon="L:\Scripting\ALFRD\assets\CitraBox_Logo_720x720.ico" L:\Scripting\ALFRD\main.py
+
+py -m PyInstaller --name=Cerberus --noconsole --icon="L:\Scripting\ALFRD\assets\cerberus\cerberus_logo_icon.ico" L:\Scripting\ALFRD\DPGToolbox\Cerberus.py
+
+
+***  ***  ***  ***
+------------------

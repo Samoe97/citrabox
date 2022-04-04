@@ -1,0 +1,1015 @@
+# CitraBox - A suite of tools for Citra Communications' Large Format department
+# DPG Toolbox v3
+# Written by John S. Fuchs (www.samoe.me)
+# main.py
+
+###########################################################
+# REQUIRED IMPORTS ########################################
+import os
+import webbrowser
+from tkinter import *
+import tkinter.font as font
+from tkinter import filedialog
+
+###########################################################
+# DPG TOOLBOX IMPORTS #####################################
+import DPGToolbox.GizmoStyle as GizmoStyle
+from DPGToolbox.sLog import *
+import DPGToolbox.StickerTool2 as Sticker
+import DPGToolbox.TileTool2 as Tile
+import DPGToolbox.MetalRoundTool2 as MetalRound
+import DPGToolbox.SiteFlow as SiteFlow
+import DPGToolbox.GraphtecConversion as GraphtecConversion
+import DPGToolbox.RollCalculator as RollCalculator
+import DPGToolbox.Renamer2 as Renamer
+import DPGToolbox.CapTool2 as Cap
+import DPGToolbox.Downloader as Downloader
+import DPGToolbox.PrintOSAdmin as PrintOS
+
+###########################################################
+# REQUIRED TO COMPILE PROJECT TO EXE USING PYINSTALLER ####
+from reportlab.pdfgen.canvas import Canvas
+from reportlab.lib.colors import CMYKColorSep
+from pdfrw import PdfReader
+from pdfrw.buildxobj import pagexobj
+from pdfrw.toreportlab import makerl
+from PyPDF2 import PdfFileReader
+from decimal import Decimal
+import hmac, hashlib, datetime, requests
+
+###########################################################
+# CONSTANTS #---------------------------------------------#
+
+scriptName = 'CITRABOX'
+scriptVersion = 'v1.5'
+buildDate = '04/04/22'
+
+scriptPath =  os.path.dirname(__file__)
+programIcon = scriptPath + '/assets/CitraBox_Logo_720x720.ico'
+
+color_main = "#3D4855"
+color_secondary = "#E79F6D"
+
+###########################################################
+# VARIABLES #---------------------------------------------#
+
+global dirSel
+global settingsOpened
+
+dirSel = ''
+settingsOpened = False
+
+###########################################################
+# INITIALIZE WINDOW #-------------------------------------#
+
+if __name__ == '__main__':
+
+    root = Tk()
+    root.title(str(scriptName) + ' - ' + str(scriptVersion) + ' - ' + str(buildDate))
+    root.configure(bg = color_main)
+
+    root.iconbitmap(programIcon)
+
+    rootFrame = Frame(root, bg = "#FFFFFF", relief = 'flat')
+    rootFrame.grid(column = 0, row = 0)
+
+    slogFrame = Frame(rootFrame, bg = color_main, relief = 'flat')
+    slogFrame.grid(column = 2, row = 0, rowspan = 2, sticky = 'nes')
+
+    fontModuleButton = font.Font(family = 'Avenir', size = 18)
+    fontModuleTitle = font.Font(family = 'Avenir Black', size = 20)
+    fontModuleVer = font.Font(family = 'Avenir Medium Oblique', size = 10)
+    fontModuleDescription = font.Font(family = 'Avenir Medium', size = 10)
+    fontSlog = font.Font(family = 'Avenir Light', size = 10)
+
+###########################################################
+# PARAMETERS #--------------------------------------------#
+
+    # RENAMER PARAMS
+    checkForCutLines = BooleanVar()
+    checkForCutLines.set(True)
+
+    # DOWNLOADER PARAMS
+    downloadTicketBool = BooleanVar()
+    downloadTicketBool.set(False)
+
+    # STICKER SHEET PARAMS
+    maxSheetWidth = IntVar()
+    maxSheetWidth.set(50)
+
+    maxSheetHeight = IntVar()
+    maxSheetHeight.set(32)
+
+    extraStickers = IntVar()
+    extraStickers.set(4)
+
+    spaceBetweenStickers = DoubleVar()
+    spaceBetweenStickers.set(0.125)
+
+    addCutLineToTicket = BooleanVar()
+    addCutLineToTicket.set(True)
+
+    dontIncludeTicketOnSheets = BooleanVar()
+    dontIncludeTicketOnSheets.set(False)
+
+    TicketOnlyOnFirstSheet = BooleanVar()
+    TicketOnlyOnFirstSheet.set(False)
+
+    archive1UPs = BooleanVar()
+    archive1UPs.set(True)
+
+    barcodeConversion = BooleanVar()
+    combineRemainders = True
+    separatePDFTile = False
+    capColorSeparation = True
+
+    # ROLL CALCULATOR PARAMS
+    rollLength = IntVar()
+    rollLength.set(1640)
+
+###########################################################
+# FUNCTION - BROWSE FOR FOLDER #--------------------------#
+
+def BrowseForFolder():
+    global dirSel
+    dirSel =  filedialog.askdirectory()
+    if dirSel != '' :
+        slogPrint(' - Location selected: ' + dirSel)
+        footerText.config(text = dirSel)
+    else :
+        slogPrint(' - Directory not set. User cancelled directory selection.')
+    return dirSel
+
+###########################################################
+# FUNCTIONS - EXECUTE SMART NAME #------------------------#
+
+def RemoteControlRenamer(directory) :
+    params = {'Directory' : directory}
+    Renamer.ParseFolder(params)
+
+def SelectSmartName():
+    smartNameFrameInfo = {
+        'name' : 'Smart Name',
+        'ver' : 'v1.9',
+        'buttonText' : 'Rename Files',
+        'description' : 'Smart Name is a tool that takes a folder of PDF files generated by HP PrintOS and renames them with applicable and useful info. Files will only be renamed if they contain a PrintOS barcode in the format "barcode-" followed by a string of numbers and letters. \n\nA file originally named \n\n"TS_4x4 - Batch 29478 -SoftTouchLamMatte Vinyl qty-100 barcode-B6E668419_2.pdf" \n\nwill be renamed to something like \n\n"24557_24586_4x4_qty 100_PRINT.pdf" \n\nOnce a file has been processed by Smart Name, it should be compatible with all the tools in this program.',
+        # 'description' : "Smart Name is a tool that takes a folder of PDF files generated by PrintOS and renames them according to their barcode. File names MUST include 'barcode-' followed by a string of numbers and letters. Most other modules in this program will only work on files that have been named using Smart Name.",
+        'mainFunc' : ExecuteSmartName,
+        'moduleDescriptionTextHeight' : 16,
+    }
+    ChangeMainContentFrame(smartNameFrameInfo)
+
+def ExecuteSmartName() :
+    params = {'Directory' : dirSel}
+    Renamer.ParseFolder(params)
+
+###########################################################
+# FUNCTIONS - CUT CONVERSION TOOL #-----------------------#
+
+def SelectGraphtecConversion() :
+    cutConversionFrameInfo = {
+        'name' : 'Graphtec Conversion Tool',
+        'ver' : 'v1.1',
+        'buttonText' : 'Convert Cut Files',
+        'description' : "The Graphtec Conversion Tool takes a folder of XML files that were created specifically for the Graphtec FC8600 and converts them to work with the Graphtec FC9000. This tool assumes that the cut files were generated using the Onyx Cut Server. After converting the XML files, you must place them into the correct folder for your Graphtec FC9000 before they will appear in the Cut Server list.",
+        'mainFunc' : ExecuteGraphtecConversion
+    }
+    ChangeMainContentFrame(cutConversionFrameInfo)
+
+def ExecuteGraphtecConversion() :
+    params = {'Directory' : dirSel}
+
+    GraphtecConversion.graphtecConversion8600(params)
+
+###########################################################
+# FUNCTIONS - ROLL CALCULATOR #---------------------------#
+
+def SelectRollCalculator():
+    rollCalcFrameInfo = {
+        'name' : 'Roll Splitting Tool',
+        'ver' : 'v1.1',
+        'buttonText' : 'Split Files by Roll',
+        'description' : "The Roll Splitting Tool takes all files in a folder, calculates their length, then splits them into subfolders based on filling up rolls of vinyl. Folders will be named 'ROLL 1', 'ROLL 2', etc. Roll length to use in calculations can be adjusted in the Settings.",
+        'mainFunc' : ExecuteRollCalculator
+    }
+    ChangeMainContentFrame(rollCalcFrameInfo)
+
+def ExecuteRollCalculator() :
+    params = {
+        'Directory' : dirSel, 
+        'maxRollLength' : rollLength.get()
+        }
+
+    RollCalculator.processLength(params)
+
+###########################################################
+# FUNCTIONS - STICKER TOOL #------------------------------#
+
+def SelectStickerTool():
+    stickerFrameInfo = {
+        'name' : 'Sticker Tool',
+        'ver' : 'v1.4',
+        'buttonText' : 'Create Sticker Sheets',
+        'description' : 'The Sticker Tool takes a folder of PDF sticker files that have been processed by Smart Name, then creates print-ready sticker sheets using info found in the filenames. A list of parameters can be changed in Settings at the bottom of the left menu, including max sheet length, extra quantities to add, and more. Sticker Tool will create however many sheets it needs to reach the quantity requested, so a sticker with "qty 500" will likely output as 3-4 sheet files.\n\nBy default, Sticker Tool looks for a "TICKET" file for each sticker, and will place a ticket in the first slot of each sticker sheet. The tool also adds a cut line to the ticket so that it cuts out easily when cutting the entire sticker sheet. See the Settings menu to disable ticket processing, disable the cut line addition only, or try other settings like "Only Place Ticket on First Sheet".',
+        'mainFunc' : ExecuteStickerTool,
+        'moduleDescriptionTextHeight' : 20,
+    }
+    ChangeMainContentFrame(stickerFrameInfo)
+
+def ExecuteStickerTool() :
+    params = {
+            'Directory' : dirSel,
+            'ExtraStickers' : extraStickers.get(),
+            'SpaceBetweenStickers' : spaceBetweenStickers.get(),
+            'MaxSheetHeight' : maxSheetHeight.get(),
+            'MaxSheetWidth' : maxSheetWidth.get(),
+            'DontIncludeTicket' : dontIncludeTicketOnSheets.get(),
+            'TicketOnlyOnFirstSheet' : TicketOnlyOnFirstSheet.get(),
+            'Archive1UPs' : archive1UPs.get(),
+            'addCutLineToTicket' : addCutLineToTicket.get()
+        }
+    Sticker.executeStickerSheetGenerator(params)
+
+###########################################################
+# FUNCTIONS - CERAMIC TILE TOOL #-------------------------#
+
+def SelectCeramicTileTool():
+    tileFrameInfo = {
+        'name' : 'Ceramic Tile Tool',
+        'ver' : 'v1.6',
+        'buttonText' : 'Create Tile Sheets',
+        'description' : 'The Ceramic Tile Tool takes a folder of PDF tile files that have been processed by Smart Name, then creates print-ready PDF jig files based on info found in the filenames. We fit 8 tiles on each print jig, so if a tile was ordered at a quantity that isn`t divisible by 8, the leftover tiles will be added to a "Remainder" group. After all normal tile jigs have been created, the tool will create sheets with all the Remainder tiles. \n\nIf a file is named something like: \n\n"TILE_25487_35980_qty 25_PRINT.pdf" \n\nThen two files will be created, as follows: \n\n"TILE_25487_35980_qty25_PRINT 3 SHEETS.pdf" \n\n"TILE REM - Order 25487 PRINT.pdf" \n\nThe first file will contain 8 tiles, and the name tells the operator to print it 3 times, giving a total of 24 tiles. The other file includes the 1 remainder tile. If other orders/tiles were processed at the same time, all remainders are grouped together on the same jig for efficiency.',
+        'mainFunc' : ExecuteCeramicTile,
+        'moduleDescriptionTextHeight' : 30,
+    }
+    ChangeMainContentFrame(tileFrameInfo)
+
+def ExecuteCeramicTile():
+    params = {'Directory' : dirSel}
+    Tile.executeTileSheetGeneratorPython(params)
+
+###########################################################
+# FUNCTIONS - METAL ROUND TOOL #--------------------------#
+
+def SelectMetalRoundTool():
+    metalFrameInfo = {
+        'name' : 'Metal Round Tool',
+        'ver' : 'v1.1',
+        'buttonText' : 'Create Metal Round Sheets',
+        'description' : 'The Metal Round Tool takes a folder of PDF tile files that have been processed by Smart Name, then creates print-ready PDF jig files based on info found in the filenames. We fit 4 metal rounds on each print jig, so if a sign was ordered at a quantity that isn`t divisible by 4, the leftover signs will be added to a "Remainder" group. After all normal metal round jigs have been created, the tool will create sheets with all the Remainder signs. \n\nIf a file is named something like: \n\n"ROUND_25487_35980_qty 15_PRINT.pdf" \n\nThen two files will be created, as follows: \n\n"ROUNDS_25487_35980_qty15_PRINT 3 SHEETS.pdf" \n\n"ROUNDS REM - Order 25487 PRINT.pdf" \n\nThe first file will contain 4 round signs, and the name tells the operator to print it 3 times, giving a total of 12 tiles. The other file includes the 1 remainder sign. If other orders/signs were processed at the same time, all remainders are grouped together on the same jig for efficiency.',
+        'mainFunc' : ExecuteMetalRoundTool,
+        'moduleDescriptionTextHeight' : 30,
+    }
+    ChangeMainContentFrame(metalFrameInfo)
+
+def ExecuteMetalRoundTool():
+    params = {'Directory' : dirSel}
+    MetalRound.executeRoundSheetGeneratorPython(params)
+
+###########################################################
+# FUNCTIONS - BOTTLECAP TOOL #----------------------------#
+
+def SelectBottlecapTool():
+    bottlecapFrameInfo = {
+        'name' : 'Bottlecap Tool',
+        'ver' : 'v1.8',
+        'buttonText' : 'Create 3UP Cap Sheets',
+        'description' : 'The Bottlecap Tool takes a folder of PDF 50up Bottlecap file that have been processed by Smart Name, then creates print-ready PDF jig files based on info found in the filenames. Our VersaUV LEF-300 printer is set up to print 3 50up sheets at a time. If a cap sheet filename says "qty 150" then the tool will put three files onto one jig. If the qty is 200, it will make one jig with 3 files on it, then another jig with only 1 file on it. \n\nIf you are processing multiple bottlecap sheets at once, the tool will group similar colors together, so that you only print white caps with other white caps, green caps with other green caps, etc.',
+        'mainFunc' : Execute3UPBottlecap,
+        'moduleDescriptionTextHeight' : 14,
+    }
+    ChangeMainContentFrame(bottlecapFrameInfo)
+
+    bottlecapFrameInfo2 = {
+        'name' : 'Bottlecap Tool (50up)',
+        'ver' : 'v1.8',
+        'buttonText' : 'Create 50up Cap Sheets',
+        'description' : 'The 50up Bottlecap Tool should only be used when you have a 1UP cap file and NO sheet file. This tool will take your 1"x1" cap file and impose 50 of them onto a PDF sheet. That sheet can then be used with the 3UP Bottlecap Tool to create print-ready PDF jigs. Please be aware that if a bottlecap is any color other than white, this tool will also attempt to use Adobe Photoshop to add a white ink layer underneath.',
+        'mainFunc' : Execute50UPBottlecap
+    }
+    moduleFrame(mainContentFrame, bottlecapFrameInfo2['name'], bottlecapFrameInfo2['ver'], bottlecapFrameInfo2['buttonText'], bottlecapFrameInfo2['description'], bottlecapFrameInfo2['mainFunc'])
+
+    # Adjustment Settings Frame
+    bottlecapAdjustmentFrame = Frame(mainContentFrame, relief = 'flat', bd = 1, bg = "#FFFFFF")
+
+    global capAdjustment1
+    capAdjustment1 = IntVar()
+    global capAdjustment2
+    capAdjustment2 = IntVar()
+    global capAdjustment3
+    capAdjustment3 = IntVar()
+    global capAdjustment4
+    capAdjustment4 = IntVar()
+    capAdjustmentEntry1 = Entry(bottlecapAdjustmentFrame, font = fontModuleDescription, textvariable=capAdjustment1, width = 3, )
+    capAdjustmentEntry1.pack(side = 'left', ipady = 2)
+    capAdjustmentEntry2 = Entry(bottlecapAdjustmentFrame, font = fontModuleDescription, textvariable=capAdjustment2, width = 3)
+    capAdjustmentEntry2.pack(side = 'right', ipady = 2)
+    capAdjustmentEntry3 = Entry(bottlecapAdjustmentFrame, font = fontModuleDescription, textvariable=capAdjustment3, width = 3)
+    capAdjustmentEntry3.pack(side = 'top', ipady = 2)
+    capAdjustmentEntry4 = Entry(bottlecapAdjustmentFrame, font = fontModuleDescription, textvariable=capAdjustment4, width = 3)
+    capAdjustmentEntry4.pack(side = 'bottom', ipady = 2)
+
+    bottlecapAdjustmentFrame.pack()
+
+def Execute3UPBottlecap():
+
+    adjustments = [
+        capAdjustment1.get(),
+        capAdjustment2.get(),
+        capAdjustment3.get(),
+        capAdjustment4.get()
+    ]
+
+    params = {
+        'Directory' : dirSel,
+        'adjustment' : adjustments,
+        'archive' : False,
+    }
+    Cap.executeCap3UPSheetGenerator(params)
+
+def Execute50UPBottlecap():
+    params = {'Directory' : dirSel}
+    Cap.executeCap50upGenerator(params)
+
+###########################################################
+# FUNCTIONS - DOWNLOADER TOOL #---------------------------#
+
+def SelectDownloader():
+
+    # INITIALIZE FILE DOWNLOADER FRAME - CUSTOM FRAME TO INSERT INTO THE MAIN CONTENT TEMPLATE
+    global downloadOrderText
+    global downloadSkuText
+
+    fileDownloaderFrame = Frame(mainContentFrame, relief = 'flat', bd = 1, bg = "#FFFFFF")
+
+    downloadOrderLabel = Label(fileDownloaderFrame, font=fontModuleDescription, text='Order: ', justify='right', bg = "#FFFFFF")
+    downloadOrderText = Entry(fileDownloaderFrame, width = 9, font=fontModuleDescription, justify='center')
+
+    downloadSkuLabel = Label(fileDownloaderFrame, font=fontModuleDescription, text='Sku: ', justify='right', bg = "#FFFFFF")
+    downloadSkuText = Entry(fileDownloaderFrame, width = 9, font=fontModuleDescription, justify='center')
+
+    # Convenient settings for download panel - bind "ENTER" to dowload and set the text cursor to active in the order field
+    root.bind('<Return>',lambda event:ExecuteDownloadSticker())
+    downloadOrderText.focus_set()
+
+    downloadTicketCheckbox = Checkbutton(fileDownloaderFrame, text="Download Ticket", fg=color_main, bg="#FFFFFF", selectcolor="#FFFFFF", onvalue=True, offvalue=False, variable=downloadTicketBool)
+
+    downloadOrderLabel.pack(pady=8, padx=4, side=LEFT)
+    downloadOrderText.pack(pady=8, padx=4, side=LEFT, ipadx=8, ipady=4)
+
+    downloadSkuLabel.pack(pady=8, padx=4, side=LEFT, ipadx=8)
+    downloadSkuText.pack(pady=8, padx=4, side=LEFT, ipadx=8, ipady=4)
+
+    downloadTicketCheckbox.pack(pady=8, padx=4, side=LEFT, ipadx=8, ipady=4)
+
+    #BY ADDING THE "customFrame" ATTRIBUTE TO THIS OBJECT, OUR FRAME WE JUST CREATED ABOVE WILL BE PACKED INTO THE MAIN CONTENT AREA BEFORE THE MAIN CONTENT TEMPLATE
+    downloaderFrameInfo = {
+        'customFrame' : fileDownloaderFrame,
+        'name' : 'File Downloader',
+        'ver' : 'v2.0',
+        'buttonText' : 'Download Files',
+        'description' : 'The File Downloader allows you to download print files directly from the HP PrintOS server. If you need to quickly reprint a sticker, or accidentally misplaced print files, you can use this tool. \n\nStart by typing in the order number, then type in the SKU for the item you want to download. If you want to download all files from an order for a certain product type, just type that product type. For instance, you can type "stickers" (case insensitive) to download all stickers from an order. \n\nOther product types include "caps", "tiles", and "metal".',
+        'mainFunc' : ExecuteDownloadSticker,
+        'moduleDescriptionTextHeight' : 14,
+    }
+    ChangeMainContentFrame(downloaderFrameInfo)
+
+def ExecuteDownloadSticker():
+    Downloader.downloadSticker(dirSel, downloadOrderText, downloadSkuText, downloadTicketBool)
+
+###########################################################
+# FUNCTIONS - PRINTOS TOOL #------------------------------#
+
+def SelectPrintOSAdmin():
+
+    # INITIALIZE FILE DOWNLOADER FRAME - CUSTOM FRAME TO INSERT INTO THE MAIN CONTENT TEMPLATE
+    global orderPrintOS
+
+    printOSAdminFrame = Frame(mainContentFrame, relief = 'flat', bg = "#FFFFFF")
+
+    orderPrintOSLabel = Label(printOSAdminFrame, font=fontModuleDescription, text='Order: ', justify='right', bg = "#FFFFFF")
+    orderPrintOS = Entry(printOSAdminFrame, width = 9, font=fontModuleDescription, justify='center')
+
+    # Convenient settings for download panel - bind "ENTER" to dowload and set the text cursor to active in the order field
+    root.bind('<Return>',lambda event:executePushOrderForward())
+    orderPrintOS.focus_set()
+
+    orderPrintOSLabel.pack(pady=8, padx=4, side=LEFT)
+    orderPrintOS.pack(pady=8, padx=4, side=LEFT, ipadx=8, ipady=4)
+
+    #BY ADDING THE "customFrame" ATTRIBUTE TO THIS OBJECT, OUR FRAME WE JUST CREATED ABOVE WILL BE PACKED INTO THE MAIN CONTENT AREA BEFORE THE MAIN CONTENT TEMPLATE
+    printOSFrameInfo = {
+        'customFrame' : printOSAdminFrame,
+        'name' : 'PrintOS Admin Tools',
+        'ver' : 'v1.0',
+        'buttonText' : 'Push Order Forward',
+        'description' : 'The PrintOS Admin Tools allow you to quickly and efficiently complete tasks that would normally take longer inside of HP`s own website. Type in an order and press ENTER to move it forward in the Production Queue. \n\ni.e.: If an order is currently in LF PRINT and you have queued it up to print, type in the order number and press ENTER. All batches inside of the order will be moved forward to the next production step, likely LF SHRINKWRAP.',
+        'mainFunc' : executePushOrderForward,
+        'moduleDescriptionTextHeight' : 14,
+    }
+    ChangeMainContentFrame(printOSFrameInfo)
+
+def executePushOrderForward() :
+    orderNum = orderPrintOS.get()
+    PrintOS.pushOrderForward(orderNum)
+
+def OpenPrintOS():
+    slogPrint(' - Opening PrintOS Siteflow')
+    webbrowser.open('https://ofui.www.printos.com/#/', new = 0, autoraise = True)
+
+###########################################################
+
+######################################################################################################################
+# INITIALIZE GUI ASSETS ##############################################################################################
+######################################################################################################################
+
+###########################################################
+# CUSTOM BUTTON CLASS #-----------------------------------#
+
+class HoverButton(Button):
+    def __init__(self, master, icons, **kw):
+        Button.__init__(self, master = master, highlightthickness = 0, bd = 0, **kw)
+        Button.config(self, bg = color_main, relief = 'flat')
+        self.padding = 0
+
+        self.selectable = True
+        self.selected = False
+
+        self.defaultImage = icons.idle
+        self.hoverImage = icons.hovered
+        self.clickedImage = icons.clicked
+        self.selectedImage = icons.selected
+
+        self['image'] = self.defaultImage
+
+        self.bind("<Enter>", on_hover)
+        self.bind("<Leave>", on_unhover)
+        self.bind("<Button-1>", on_clicked)
+
+###########################################################
+# FUNCTIONS FOR BUTTONS #---------------------------------#
+
+def on_hover(event):
+    if event.widget.selected == False :
+        event.widget['image'] = event.widget.hoverImage
+
+def on_unhover(event):
+    if event.widget.selected == False :
+        event.widget['image'] = event.widget.defaultImage
+
+def on_clicked(event):
+    event.widget['image'] = event.widget.clickedImage
+    root.update()
+
+    menuButtons = menuFrame.winfo_children()
+
+    for i in menuButtons :
+        if i != event.widget :
+            i['image'] = i.defaultImage
+            i.selected = False
+        
+    if event.widget.selectable == True:
+        event.widget.selected = True
+        event.widget['image'] = event.widget.selectedImage
+        root.update()
+    else :
+        event.widget.selected = False
+        root.after(100, on_hover(event))
+
+def remove(event):
+    event.grid_remove()
+
+###########################################################
+# CUSTOM FRAME CLASS #------------------------------------#
+
+class moduleFrame(Frame):
+    def __init__(self, master, moduleName='', moduleVer='', button1Text='', moduleDescription='', mainFunc=BrowseForFolder, moduleDescriptionTextHeight=8, customFrame=None, **kw):
+
+        self.moduleRootFrame = Frame(master, bg = "#FFFFFF", relief = 'flat', bd = 0)
+
+        self.button1 = Button(self.moduleRootFrame, image = blankButtonImg, bg = "#FFFFFF", relief = 'flat', compound = 'center', font = fontModuleButton, fg = "#FFFFFF")
+        self.button1.config(text = button1Text)
+        self.button1.pack(pady = 8, ipady = 10)
+        self.button1.config(command = mainFunc)
+        root.bind('<Return>',lambda event:mainFunc())
+
+        if customFrame != None :
+            customFrame.pack(pady=4)
+
+        self.moduleTitleFrame = Frame(self.moduleRootFrame, relief = 'flat', bg = "#FFFFFF")
+        
+        self.moduleTitleText = Label(self.moduleTitleFrame, font = fontModuleTitle, fg = color_main, bg = "#FFFFFF")
+        self.moduleTitleText.config(text = moduleName)
+        self.moduleTitleText.grid(column = 0, row = 0, sticky = 'sw')
+
+        self.moduleVerText = Label(self.moduleTitleFrame, font=fontModuleVer, fg = color_secondary, bg = "#FFFFFF")
+        self.moduleVerText.config(text = moduleVer)
+        self.moduleVerText.grid(column = 1, row = 0, sticky = 'se', pady = 8)
+
+        self.moduleHorLine = Frame(self.moduleTitleFrame, bg = color_main, height = 2, bd = 0, width = 420)
+        self.moduleHorLine.grid(column = 0, columnspan = 2, row = 1, sticky = 's')
+
+        self.moduleDescriptionText = Text(self.moduleTitleFrame, fg = color_main, bg = "#FFFFFF", font = fontModuleDescription, relief = 'flat', wrap = 'word')
+        self.moduleDescriptionText.insert('end', moduleDescription)
+        self.moduleDescriptionText.config(width = 60, height = moduleDescriptionTextHeight, state = 'disabled')
+        self.moduleDescriptionText.grid(column = 0, columnspan = 2, row = 2, pady = 8)
+
+        self.moduleTitleFrame.pack()
+
+        self.moduleRootFrame.pack(pady=4)
+
+###########################################################
+# ICONS CLASS #-------------------------------------------#
+
+class Icons() :
+        idle = '',
+        hovered = '',
+        clicked = '',
+        selected = ''
+
+###########################################################
+# INITIALIZE BUTTON IMAGES #------------------------------#
+
+if __name__ == '__main__' :
+
+    icons_SelectFolder = Icons()
+    icons_SelectFolder.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_idle.png')
+    icons_SelectFolder.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_hovered.png')
+    icons_SelectFolder.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_clicked.png')
+    icons_SelectFolder.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_selected.png')
+
+    icons_SmartName = Icons()
+    icons_SmartName.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_idle.png')
+    icons_SmartName.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_hovered.png')
+    icons_SmartName.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_clicked.png')
+    icons_SmartName.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_selected.png')
+
+    icons_convertCutFiles = Icons()
+    icons_convertCutFiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_idle.png')
+    icons_convertCutFiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_hovered.png')
+    icons_convertCutFiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_clicked.png')
+    icons_convertCutFiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_selected.png')
+
+    icons_Stickers = Icons()
+    icons_Stickers.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_idle.png')
+    icons_Stickers.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_hovered.png')
+    icons_Stickers.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_clicked.png')
+    icons_Stickers.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_selected.png')
+
+    icons_CeramicTiles = Icons()
+    icons_CeramicTiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_idle.png')
+    icons_CeramicTiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_hovered.png')
+    icons_CeramicTiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_clicked.png')
+    icons_CeramicTiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_selected.png')
+
+    icons_MetalSigns = Icons()
+    icons_MetalSigns.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_idle.png')
+    icons_MetalSigns.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_hovered.png')
+    icons_MetalSigns.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_clicked.png')
+    icons_MetalSigns.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_selected.png')
+
+    icons_SplitFiles = Icons()
+    icons_SplitFiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_idle.png')
+    icons_SplitFiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_hovered.png')
+    icons_SplitFiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_clicked.png')
+    icons_SplitFiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_selected.png')
+
+    icons_Bottlecaps = Icons()
+    icons_Bottlecaps.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_idle.png')
+    icons_Bottlecaps.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_hovered.png')
+    icons_Bottlecaps.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_clicked.png')
+    icons_Bottlecaps.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_selected.png')
+
+    icons_printOS = Icons()
+    icons_printOS.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_idle.png')
+    icons_printOS.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_hovered.png')
+    icons_printOS.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_clicked.png')
+    icons_printOS.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_selected.png')
+
+    icons_Settings = Icons()
+    icons_Settings.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_idle.png')
+    icons_Settings.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_hovered.png')
+    icons_Settings.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_clicked.png')
+    icons_Settings.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_selected.png')
+
+    icons_Downloader = Icons()
+    icons_Downloader.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_idle.png')
+    icons_Downloader.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_hovered.png')
+    icons_Downloader.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_clicked.png')
+    icons_Downloader.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_selected.png')
+
+    headerImageRef = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox.png')
+
+    icons_Header = Icons()
+    icons_Header.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox.png')
+    icons_Header.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox_hovered.png')
+    icons_Header.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox_hovered.png')
+    icons_Header.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox.png')
+
+    blankButtonImg = PhotoImage(file = scriptPath + '/assets/Buttons2/button_MainFunc_BlankOrange.png')
+
+###########################################################
+# LOAD WINDOW CONTENT #-----------------------------------#
+
+def LoadWindow() :
+    
+    ###########################################################
+    ##### HEADER FRAME #####
+        
+    headerFrame = Frame(rootFrame, bg = color_main, relief = 'flat')
+    headerFrame.grid(column = 0, row = 0, sticky = 'nws')
+
+    # headerImage = Label(headerFrame, bg = color_main, image=headerImageRef, bd=0)
+    # headerImage.grid(column=0, row=0, sticky='nw')
+
+    headerImage = HoverButton(headerFrame, icons = icons_Header, relief = 'flat')
+    headerImage.grid(column = 0, row = 0, sticky = 'nws')
+    headerImage.selectable = False
+
+    ##### END HEADER FRAME #####
+    ###########################################################
+    ##### MENU FRAME #####
+
+    global menuFrame
+    menuFrame = Frame(rootFrame, relief = 'flat', bg = color_main)
+    menuFrame.grid(column = 0, row = 1, sticky = 'nws', padx = 0, pady = 0)
+
+    buttonSelectFolder = HoverButton(menuFrame, icons = icons_SelectFolder, relief = 'flat')
+    buttonSelectFolder.configure(command = BrowseForFolder)
+    buttonSelectFolder.pack(padx = 0, pady = 0)
+    buttonSelectFolder.selectable = False
+
+    buttonSmartName = HoverButton(menuFrame, icons = icons_SmartName, relief = 'flat')
+    buttonSmartName.configure(command = SelectSmartName)
+    buttonSmartName.pack(padx = 0, pady = 0)
+
+    buttonStickers = HoverButton(menuFrame, icons = icons_Stickers, relief = 'flat')
+    buttonStickers.configure(command = SelectStickerTool)
+    buttonStickers.pack(padx = 0, pady = 0)
+
+    buttonTiles = HoverButton(menuFrame, icons = icons_CeramicTiles, relief = 'flat')
+    buttonTiles.configure(command = SelectCeramicTileTool)
+    buttonTiles.pack(padx = 0, pady = 0)
+
+    buttonMetal = HoverButton(menuFrame, icons = icons_MetalSigns, relief = 'flat')
+    buttonMetal.configure(command = SelectMetalRoundTool)
+    buttonMetal.pack(padx = 0, pady = 0)
+
+    buttonCaps = HoverButton(menuFrame, icons = icons_Bottlecaps, relief = 'flat')
+    buttonCaps.configure(command = SelectBottlecapTool)
+    buttonCaps.pack(padx = 0, pady = 0)
+
+    buttonSplitFiles = HoverButton(menuFrame, icons = icons_SplitFiles, relief = 'flat')
+    buttonSplitFiles.configure(command = SelectRollCalculator)
+    buttonSplitFiles.pack(padx = 0, pady = 0)
+
+    buttonConvertCutFiles = HoverButton(menuFrame, icons = icons_convertCutFiles, relief = 'flat')
+    buttonConvertCutFiles.configure(command = SelectGraphtecConversion)
+    buttonConvertCutFiles.pack(padx = 0, pady = 0)
+
+    buttonDownloader = HoverButton(menuFrame, icons = icons_Downloader, relief = 'flat')
+    buttonDownloader.configure(command = SelectDownloader)
+    buttonDownloader.pack(padx = 0, pady = 0)
+
+    buttonOpenPrintOS = HoverButton(menuFrame, icons = icons_printOS, relief = 'flat')
+    buttonOpenPrintOS.configure(command = SelectPrintOSAdmin)
+    buttonOpenPrintOS.pack(padx = 0, pady = 0)
+    # buttonOpenPrintOS.selectable = False
+
+    buttonSettings = HoverButton(menuFrame, icons = icons_Settings, relief = 'flat')
+    buttonSettings.configure(command = OpenSettings)
+    buttonSettings.pack(padx = 0, pady = 0)
+
+    ##### END MENU FRAME #####
+    ###########################################################
+    ##### MAIN CONTENT FRAME #####
+
+    global mainContentFrame
+    mainContentFrame = Frame(rootFrame, bg = "#FFFFFF", relief = 'flat', bd = 0)
+    mainContentFrame.grid(column = 1, row = 0, rowspan = 3, sticky = 'ns')
+    mainContentFrame.config(width = 500, height = 846)
+
+    ## STICKER MAIN CONTENT FRAME ##
+    
+    stickerFrame = moduleFrame(mainContentFrame, scriptName, scriptVersion, 'Choose a Folder', "Always begin by clicking 'Select Folder' on the left, then choose the folder containing files you'd like to work on. Next, choose a module from the list on the left.")
+
+    ##### END MAIN CONTENT FRAME #####
+    ###########################################################
+    ##### FOOTER FRAME #####
+
+    footerFrame = Frame(rootFrame, bg = color_main, relief = 'flat')
+    footerFrame.grid(column = 0, row = 2, columnspan = 3, sticky = 'esw')
+
+    # footerBar = Frame(footerFrame, bg=color_secondary, height=6, bd=0, width=1188+24) #the plus 24 is due to the padding of 12 on slog (see below)
+    # footerBar.pack(fill="x", side='bottom')
+
+    global footerText
+    footerText = Label(footerFrame, bg = color_secondary, fg = color_main, font = fontModuleDescription, justify = 'center', compound = 'center', width = 152)
+    global dirSel
+    footerText.config(text = "No folder currently selected.")
+    footerText.pack(anchor = 'c', side = 'bottom', ipady = 5)
+
+    ##### END FOOTER FRAME #####
+    ###########################################################
+    ##### CONSOLE LOG FRAME #####
+
+    global slog
+    slog = initSlog(slogFrame, color_main, color_secondary, fontSlog)
+    slog.configure(width = 50, height = 46)
+    slog.grid(padx = 12, pady = 30, sticky = 'nse')
+
+    ##### END CONSOLE LOG FRAME #####
+
+###########################################################
+# FUNCTION - CHANGE MAIN CONTENT #------------------------#
+
+def ChangeMainContentFrame(newFrameInfo) :
+
+    global newFrame
+
+    if settingsOpened == True:
+        CloseSettings()
+
+    children = mainContentFrame.winfo_children()
+    for i in children :
+        i.pack_forget()
+
+    try:
+        name = newFrameInfo['name']
+    except: name = ''
+    try:
+        ver = newFrameInfo['ver']
+    except: ver = ''
+    try:
+        buttonText = newFrameInfo['buttonText']
+    except: buttonText = ''
+    try:
+        description = newFrameInfo['description']
+    except: description = ''
+    try:
+        mainFunc = newFrameInfo['mainFunc']
+    except: mainFunc = ''
+    try:
+        textHeight = newFrameInfo['moduleDescriptionTextHeight']
+    except: textHeight = 8 #default height for description text box if none is specified
+    try:
+        customFrame = newFrameInfo['customFrame']
+    except: customFrame = None
+
+    topSpacer = Frame(mainContentFrame, height = 32, bg = "#FFFFFF").pack()
+
+    newFrame = moduleFrame(mainContentFrame, name, ver, buttonText, description, mainFunc, textHeight, customFrame)
+
+###########################################################
+# FUNCTION - OPEN SETTINGS #------------------------------#
+
+def OpenSettings() :
+
+    fontParameterHeader = font.Font(family='Avenir Black', size=13)
+    fontParameterTitle = font.Font(family='Avenir Medium Oblique', size=11)
+    fontParameterBody = font.Font(family='Avenir Medium', size=11)
+
+    children = mainContentFrame.winfo_children()
+    for i in children :
+        i.pack_forget()
+
+    global settingsOpened
+
+    global entry_Parameter_ExtraStickers
+    global entry_Parameter_MaxSheetHeight
+    global entry_Parameter_MaxSheetWidth
+    global entry_Parameter_SpaceBetween
+    global entry_Parameter_RollLength
+
+    # global noTicketOnSheets
+    # global infotechProcessing
+    # global singleTicketOnSheets
+    # global checkbox_NoTicketOnSheets
+    # global checkbox_DontProcessTickets
+    # global checkbox_barcodeConversion
+
+    root_Settings = Frame(mainContentFrame, bg = "#FFFFFF", relief = 'flat', width=400)
+
+    frame_Settings = Frame(root_Settings, relief = 'flat', bg = "#FFFFFF")
+
+    root_Settings.pack(pady = 16)
+    rootFrame.grid_configure()
+
+    settingsOpened = True
+
+    label_ParametersTitle = Label(
+        frame_Settings, 
+        fg = color_main, 
+        bg = "#FFFFFF", 
+        font = fontParameterHeader, 
+        text = 'SETTINGS')
+
+    label_Parameter_FileRenamer = Label(frame_Settings, fg = color_main, bg = "#FFFFFF", font = fontParameterTitle, text = 'SMART NAME')
+    checkbox_CheckForCutLines = Checkbutton(frame_Settings, text = "Check for cut lines", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False, variable = checkForCutLines)
+
+    ###
+    separator_Parameter_1 = Frame(frame_Settings, bg = color_main, height = 2, bd = 0)
+    ###
+
+    label_Parameter_StickerDownloader = Label(frame_Settings, fg = color_main, bg = "#FFFFFF", font = fontParameterTitle, text = 'STICKER DOWNLOADER')
+    checkbox_DownloadTicket = Checkbutton(frame_Settings, text = "Download Infotech ticket", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False, variable = downloadTicketBool)
+
+    ###
+    separator_Parameter_2 = Frame(frame_Settings, bg = color_main, height = 2, bd = 0)
+    ###
+
+    ### STICKER SETTINGS ###
+
+    label_Parameter_StickerSheets = Label(frame_Settings, fg = color_main, bg = "#FFFFFF", font = fontParameterTitle, text = 'STICKER TOOL')
+    checkbox_FirstSheetTicketOnly = Checkbutton(frame_Settings, text = "Only include Infotech on first sheet", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", variable = TicketOnlyOnFirstSheet)
+
+    checkbox_NoTicketOnSheets = Checkbutton(frame_Settings, text = "Do not include Infotech on sticker sheets", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", variable = dontIncludeTicketOnSheets)
+    checkbox_DontProcessTickets = Checkbutton(frame_Settings, text = "Add cut line to Infotechs", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False, variable = addCutLineToTicket)
+    checkbox_barcodeConversion = Checkbutton(frame_Settings, text = "Convert barcode on Infotechs", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False, variable = barcodeConversion)
+
+    checkbox_archive1UPs = Checkbutton(frame_Settings, text = "Archive 1UPs after sheet is created", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", variable = archive1UPs)
+
+    ##
+
+    frame_spaceBetween = Frame(frame_Settings, relief = 'flat', bg = "#FFFFFF")
+    entry_Parameter_SpaceBetween = Entry(frame_spaceBetween, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, width = 6, relief = 'solid', justify = 'center')
+    entry_Parameter_SpaceBetween.insert(0, spaceBetweenStickers.get())
+    label_SpaceBetween = Label(frame_spaceBetween, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, text = 'Space Between Stickers')
+
+    entry_Parameter_SpaceBetween.pack(side = 'left')
+    label_SpaceBetween.pack(side = 'left', padx = 8)
+
+    ##
+
+    frame_MaxSheetHeight = Frame(frame_Settings, relief = 'flat', bg = "#FFFFFF")
+    entry_Parameter_MaxSheetHeight = Entry(frame_MaxSheetHeight, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, width = 6, relief = 'solid', justify = 'center')
+    entry_Parameter_MaxSheetHeight.insert(0, maxSheetHeight.get())
+    label_MaxSheetHeight = Label(frame_MaxSheetHeight, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, text = 'Max Sheet Height')
+
+    entry_Parameter_MaxSheetHeight.pack(side = 'left')
+    label_MaxSheetHeight.pack(side = 'left', padx = 8)
+
+    ##
+
+    frame_MaxSheetWidth = Frame(frame_Settings, relief = 'flat', bg = "#FFFFFF")
+    entry_Parameter_MaxSheetWidth = Entry(frame_MaxSheetWidth, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, width = 6, relief = 'solid', justify = 'center')
+    entry_Parameter_MaxSheetWidth.insert(0, maxSheetWidth.get())
+    label_MaxSheetWidth = Label(frame_MaxSheetWidth, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, text = 'Max Sheet Width')
+
+    entry_Parameter_MaxSheetWidth.pack(side = 'left')
+    label_MaxSheetWidth.pack(side = 'left', padx = 8)
+
+    ##
+
+    frame_ExtraStickers = Frame(frame_Settings, relief = 'flat', bg = "#FFFFFF")
+    entry_Parameter_ExtraStickers = Entry(frame_ExtraStickers, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, width = 6, relief = 'solid', justify = 'center')
+    entry_Parameter_ExtraStickers.insert(0, extraStickers.get())
+    label_ExtraStickers = Label(frame_ExtraStickers, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, text = 'Extra Stickers')
+
+    entry_Parameter_ExtraStickers.pack(side = 'left')
+    label_ExtraStickers.pack(side = 'left', padx = 8)
+
+    ###
+    separator_Parameter_3 = Frame(frame_Settings, bg = color_main, height = 2, bd = 0)
+    ###
+
+    ### CERAMIC TILE SETTINGS ###
+
+    label_Parameter_TileSheets = Label(frame_Settings, fg = color_main, bg = "#FFFFFF", font = fontParameterTitle, text = 'CERAMIC TILE TOOL')
+    checkbox_CombineTileRemainders = Checkbutton(frame_Settings, text = "Combine remainders (DISABLED)", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False)
+    checkbox_MultiPDFTile = Checkbutton(frame_Settings, text = "Create PDF for each sheet (DISABLED)", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False)
+
+    ###
+    separator_Parameter_4 = Frame(frame_Settings, bg = color_main, height = 2, bd = 0)
+    ###
+
+    ### BOTTLECAP SETTINGS ###
+
+    label_Parameter_CapSheets = Label(frame_Settings, fg = color_main, bg = "#FFFFFF", font = fontParameterTitle, text = 'BOTTLECAP TOOL')
+    checkbox_CapColorSeparation = Checkbutton(frame_Settings, text = "Don't separate by color (DISABLED)", fg = color_main, bg = "#FFFFFF", font = fontParameterBody, selectcolor = "#FFFFFF", onvalue = True, offvalue = False)
+
+    ###
+    separator_Parameter_5 = Frame(frame_Settings, bg = color_main, height = 2, bd = 0)
+    ###
+
+    ### ROLL CALCULATOR SETTINGS ###
+
+    label_Parameter_RollCalculator = Label(frame_Settings, fg = color_main, bg = "#FFFFFF", font = fontParameterTitle, text = 'ROLL CALCULATOR')
+
+    frame_RollCalculator = Frame(frame_Settings, relief = 'flat', bg = "#FFFFFF")
+
+    entry_Parameter_RollLength = Entry(frame_RollCalculator, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, width = 6, relief = 'solid', justify = 'center')
+    entry_Parameter_RollLength.insert(0, rollLength.get())
+
+    label_RollLength = Label(frame_RollCalculator, fg = color_main, bg = "#FFFFFF", font = fontParameterBody, text = 'Roll Length')
+
+    entry_Parameter_RollLength.pack(side = 'left')
+    label_RollLength.pack(side = 'left', padx = 8)
+
+    ###########################################################
+    # PACK SETTINGS #-----------------------------------------#
+
+    label_ParametersTitle.pack(anchor = 'w', padx = 24, ipady = 4)
+
+    label_Parameter_FileRenamer.pack(anchor = 'w', padx = 24, pady = 2)
+    checkbox_CheckForCutLines.pack(anchor = 'w', padx = 50, pady = 2)
+
+    separator_Parameter_1.pack(padx = 24, fill = 'x', pady = 4)
+
+    label_Parameter_StickerDownloader.pack(anchor = 'w', padx = 24, pady = 2)
+    checkbox_DownloadTicket.pack(anchor = 'w', padx = 50, pady = 2)
+
+    separator_Parameter_2.pack(padx = 24, fill = 'x', pady = 4)
+
+    label_Parameter_StickerSheets.pack(anchor = 'w', padx = 24, pady = 2)
+    checkbox_FirstSheetTicketOnly.pack(anchor = 'w', padx = 50, pady = 2)
+    checkbox_NoTicketOnSheets.pack(anchor = 'w', padx = 50, pady = 2)
+    checkbox_DontProcessTickets.pack(anchor = 'w', padx = 50, pady = 2)
+    checkbox_barcodeConversion.pack(anchor = 'w', padx = 50, pady = 2)
+    checkbox_archive1UPs.pack(anchor = 'w', padx = 50, pady = 2)
+    frame_spaceBetween.pack(anchor = 'w', padx = 50, pady = 2)
+    frame_MaxSheetHeight.pack(anchor = 'w', padx = 50, pady = 2)
+    frame_MaxSheetWidth.pack(anchor = 'w', padx = 50, pady = 2)
+    frame_ExtraStickers.pack(anchor = 'w', padx = 50, pady = 2)
+
+    separator_Parameter_3.pack(padx = 24, fill = 'x', pady = 4)
+
+    label_Parameter_TileSheets.pack(anchor = 'w', padx = 24, pady = 2)
+    checkbox_CombineTileRemainders.pack(anchor = 'w', padx = 50, pady = 2)
+    checkbox_MultiPDFTile.pack(anchor = 'w', padx = 50, pady = 2)
+
+    separator_Parameter_4.pack(padx = 24, fill = 'x', pady = 4)
+
+    label_Parameter_CapSheets.pack(anchor = 'w', padx = 24, pady = 2)
+    checkbox_CapColorSeparation.pack(anchor = 'w', padx = 50, pady = 2)
+
+    separator_Parameter_5.pack(padx = 24, fill = 'x', pady = 4)
+
+    label_Parameter_RollCalculator.pack(anchor = 'w', padx = 24, pady = 2)
+    frame_RollCalculator.pack(anchor = 'w', padx = 50, pady = 2)
+    # entry_Parameter_RollLength.pack(anchor = 'w', padx = 50, pady = 2)
+
+    frame_Settings.pack(fill = 'y')
+    root_Settings_Instance = root_Settings
+    frame_Settings_Instance = frame_Settings
+
+###########################################################
+# FUNCTION - CLOSE SETTINGS #-----------------------------#
+
+def CloseSettings() :
+
+    spaceBetweenStickers.set(entry_Parameter_SpaceBetween.get())
+    maxSheetWidth.set(entry_Parameter_MaxSheetWidth.get())
+    maxSheetHeight.set(entry_Parameter_MaxSheetHeight.get())
+    extraStickers.set(entry_Parameter_ExtraStickers.get())
+
+    rollLength.set(entry_Parameter_RollLength.get())
+
+    settingsOpened = False
+
+###########################################################
+
+# DOWNLOAD STICKER FRAME
+# if __name__ == '__main__' :
+
+#     downloadOrder = ''
+#     downloadSku = ''
+
+#     fileDownloaderFrame = Frame(rootFrame, relief = 'flat', bd = 1, bg = "#FFFFFF")
+
+#     downloadOrderText = Entry(fileDownloaderFrame, width = 9, font=fontSmallBold, textvariable=downloadOrder, justify='center')
+#     downloadSkuText = Entry(fileDownloaderFrame, width = 9, font=fontSmallBold, textvariable=downloadSku, justify='center')
+
+#     downloadStickerButton = Button(
+#         fileDownloaderFrame,
+#         image = button_Yellow_Small,
+#         text = 'Download Sticker',
+#         compound = 'center',
+#         fg = GizmoStyle.bg_blue,
+#         bg = "#FFFFFF",
+#         font = fontSmall,
+#         borderwidth = 0,
+#         highlightthickness = 0,
+#         command = lambda:executeDownloadSticker(),
+#         relief = 'flat')
+
+#     root.bind('<Return>',lambda event:executeDownloadSticker())
+#     downloadTicketCheckbox = Checkbutton(fileDownloaderFrame, text="Download Ticket", fg='white', bg=GizmoStyle.bg_blue, selectcolor='#1A283A', onvalue=True, offvalue=False, variable=downloadTicketBool)
+
+#     downloadOrderText.focus_set()
+
+#     downloadOrderText.pack(pady=8, padx=8, side=LEFT, ipady=4, ipadx=8)
+#     downloadSkuText.pack(pady=8, padx=8, side=LEFT, ipady=4, ipadx=8)
+#     downloadStickerButton.pack(pady=8, padx=8, side=LEFT)
+#     downloadTicketCheckbox.pack(pady=8, padx=2, side=LEFT)
+
+#     fileDownloaderFrame.grid(column=1, columnspan=4, row=downloaderRow, padx=8, pady=8)
+
+###########################################################
+
+# MAIN EXECUTION
+if __name__ == '__main__' :
+    LoadWindow()
+    root.mainloop()
+
+###########################################################
