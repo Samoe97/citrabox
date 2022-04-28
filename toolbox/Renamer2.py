@@ -14,9 +14,9 @@
 
 import json, os, shutil
 from math import floor
-from DPGToolbox import SiteFlow
+from toolbox import SiteFlow
 from os.path import exists
-from DPGToolbox.sLog import *
+from toolbox.sLog import *
 import time
 
 # Initialize Variables
@@ -60,8 +60,8 @@ def CheckForSpotColors(item, backLabel) :
     if item.type == 'Sticker' and backLabel == 'PRINT':
  
         s = open(itemFilePath, 'rb').read()
-        kissCutCheck = s.__contains__(b'CutContour')
-        thruCutCheck = s.__contains__(b'PerfCutContour')
+        kissCutCheck = s.__contains__(b'/CutContour')
+        thruCutCheck = s.__contains__(b'/PerfCutContour')
 
         if kissCutCheck == False:
             slogPrint(" --- No CutContour path found in " + str(item.order) + '_' + str(item.sku))

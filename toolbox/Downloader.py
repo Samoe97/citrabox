@@ -1,10 +1,10 @@
 from tkinter.filedialog import Directory
 import win32api, json, urllib
-import DPGToolbox.SiteFlow as SiteFlow
-import DPGToolbox.Renamer as Renamer
-import DPGToolbox.Renamer2 as Renamer2
-from DPGToolbox.sLog import slogPrint
-# import DPGToolboxGUI2 as GUI
+import toolbox.SiteFlow as SiteFlow
+import toolbox.Renamer as Renamer
+import toolbox.Renamer2 as Renamer2
+from toolbox.sLog import slogPrint
+# import toolboxGUI2 as GUI
 
 def downloadSticker(directory, downloadOrderText, downloadSkuText, downloadTicketBool):
 

@@ -4,8 +4,8 @@
 # JOHN SAMUEL FUCHS
 # www.SAMOE.ME
 
-from DPGToolbox import SiteFlow
-from DPGToolbox.sLog import slogPrint
+from toolbox import SiteFlow
+from toolbox.sLog import slogPrint
 import json
 
 def pushOrderForward (orderNum) :

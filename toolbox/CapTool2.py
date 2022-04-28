@@ -4,10 +4,10 @@
 
 ###########################################################
 # REQUIRED IMPORTS ########################################
-from DPGToolbox import Renamer
-from DPGToolbox.sLog import slogPrint
+from toolbox import Renamer
+from toolbox.sLog import slogPrint
 import math, os
-from DPGToolbox import Archiver_TS
+from toolbox import Archiver_TS
 
 ###########################################################
 # IMPORTS FOR PDF CREATION ################################
@@ -23,7 +23,7 @@ global scriptLocation
 global allPrintPDFs
 global jsSave
 scriptLocation = os.path.dirname(__file__)
-assetLocation = scriptLocation.replace('DPGToolbox', 'assets')
+assetLocation = scriptLocation.replace('toolbox', 'assets')
 jsSave = assetLocation + '/jssavePS.js'
 
 ###########################################################

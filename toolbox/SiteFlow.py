@@ -5,7 +5,7 @@
 #---------------------------------------------------#
 
 import hmac, hashlib, datetime, requests
-from DPGToolbox import keyringDPG
+from toolbox import keyringDPG
 
 #---------------------------------------------------#
 

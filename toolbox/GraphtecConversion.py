@@ -2,7 +2,7 @@
 # FC8600 -> FC9000
 # PYTHON
 
-from DPGToolbox.sLog import slogPrint
+from toolbox.sLog import slogPrint
 import os
 
 def graphtecConversion8600(params):

@@ -2,7 +2,7 @@
 # Calculate length of files in directory
 # Split the files into separate folders based on material usage
 
-from DPGToolbox.sLog import slogPrint
+from toolbox.sLog import slogPrint
 import os, shutil
 from PyPDF2 import PdfFileReader
 from decimal import Decimal # CALCULATES ROLL LENGTH

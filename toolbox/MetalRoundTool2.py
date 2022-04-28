@@ -1,9 +1,9 @@
 import os
 import math
 import shutil
-from DPGToolbox.sLog import slogPrint
-from DPGToolbox import Renamer
-from DPGToolbox import Archiver_TS
+from toolbox.sLog import slogPrint
+from toolbox import Renamer
+from toolbox import Archiver_TS
 
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib.colors import CMYKColorSep
