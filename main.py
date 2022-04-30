@@ -43,14 +43,21 @@ import hmac, hashlib, datetime, requests
 # CONSTANTS #---------------------------------------------#
 
 scriptName = 'CITRABOX'
-scriptVersion = 'v1.5'
-buildDate = '04/04/22'
+scriptVersion = 'v1.9'
+buildDate = '04/30/22'
 
 scriptPath =  os.path.dirname(__file__)
 programIcon = scriptPath + '/assets/CitraBox_Logo_720x720.ico'
 
 color_main = "#3D4855"
 color_secondary = "#E79F6D"
+color_tertiary = '#BF845B'
+
+buttonColors = [
+    color_main,
+    color_secondary,
+    color_tertiary
+]
 
 ###########################################################
 # VARIABLES #---------------------------------------------#
@@ -69,33 +76,34 @@ if __name__ == '__main__':
     root = Tk()
     root.title(str(scriptName) + ' - ' + str(scriptVersion) + ' - ' + str(buildDate))
     root.configure(bg = color_main)
+    root.minsize(1120, 864)
 
     root.iconbitmap(programIcon)
 
     rootFrame = Frame(root, bg = "#FFFFFF", relief = 'flat')
-    rootFrame.grid(column = 0, row = 0, sticky = 'news')
+    rootFrame.grid(column = 0, row = 0, sticky = 'NEWS')
 
     root.grid_rowconfigure(0, weight = 1)
     root.grid_columnconfigure(0, weight = 1)
-    # rootFrame.pack()
 
     slogFrame = Frame(rootFrame, bg = color_main, relief = 'flat')
-    slogFrame.grid(column = 2, row = 0, rowspan = 4, sticky = 'NSEW')
+    slogFrame.grid(column = 2, row = 0, sticky = 'NEWS')
+
+    slogFrame.grid_rowconfigure(0, weight = 1)
+    slogFrame.grid_columnconfigure(0, weight = 1)
 
     fontModuleButton = font.Font(family = 'Avenir', size = 18)
     fontModuleTitle = font.Font(family = 'Avenir Black', size = 20)
-    fontModuleVer = font.Font(family = 'Avenir Medium Oblique', size = 10)
-    fontModuleDescription = font.Font(family = 'Avenir Medium', size = 10)
+    fontModuleVer = font.Font(family = 'Avenir Medium Oblique', size = 12)
+    fontModuleDescription = font.Font(family = 'Avenir Medium', size = 12)
     fontSlog = font.Font(family = 'Avenir Light', size = 10)
 
-    rootFrame.grid_columnconfigure(0, weight = 4, minsize = 324)
-    rootFrame.grid_columnconfigure(1, weight = 4, minsize = 460)
-    rootFrame.grid_columnconfigure(2, weight = 1, minsize = 200)
+    rootFrame.grid_columnconfigure(0, weight = 1, minsize = 310)
+    rootFrame.grid_columnconfigure(1, weight = 40, minsize = 800)
+    rootFrame.grid_columnconfigure(2, weight = 1, minsize = 10)
 
-    rootFrame.grid_rowconfigure(0, weight = 1, minsize = 128)
-    rootFrame.grid_rowconfigure(1, weight = 1, minsize = 620)
-    rootFrame.grid_rowconfigure(2, weight = 1)
-    rootFrame.grid_rowconfigure(3, weight = 1)
+    rootFrame.grid_rowconfigure(0, weight = 40, minsize = 800)
+    rootFrame.grid_rowconfigure(1, weight = 1, minsize = 32)
 
 ###########################################################
 # PARAMETERS #--------------------------------------------#
@@ -467,61 +475,75 @@ def OpenPrintOS():
 ###########################################################
 # CUSTOM BUTTON CLASS #-----------------------------------#
 
-class HoverButton(Label):
-    def __init__(self, master, icons, command=None, **kw):
-        Label.__init__(self, master = master, highlightthickness = 0, bd = 0, **kw)
-        Label.config(self, bg = color_main, relief = 'flat')
-        self.padding = 0
+class HoverButton(Label) :
+
+    def on_hover(self, event):
+        if self.selected == False :
+            if self.images :
+                if self.images.hovered[0] != None :
+                    self.config(image = self.images.hovered)
+            if self.colors :
+                self.config(bg = self.colors[1])
+
+    def on_unhover(self, event):
+        if self.selected == False :
+            if self.images :
+                self.config(image = self.images.idle)
+            if self.colors :            
+                self.config(bg = self.colors[0])
+            
+    def on_clicked(self, event):
+        if self.images :
+            if self.images.clicked[0] != None :
+                self.config(image = self.images.clicked)
+        if self.colors :        
+            self.config(self, bg = self.colors[2])
+        
+        root.update()
+
+        if self.menuButton == True :
+            menuButtons = menuFrame.winfo_children()
+
+            for i in menuButtons :
+                if i != event.widget :
+                    i['image'] = i.images.idle
+                    i.config(bg = i.colors[0])
+                    i.selected = False
+
+            # time.sleep(0.05)
+
+        if self.command != None :
+            self.command()
+
+        if self.selectable == False :
+            self.selected = False
+            root.after(100, self.on_hover(self))
+        else :
+            self.selected = True
+            if self.images.selected != None :
+                self.config(image = self.images.selected)
+            if self.colors :
+                root.after(50, self.config(bg = self.colors[1]))
+
+    def __init__(self, master, text = None, command = None, colors = buttonColors, images = None, menuButton = False) :
+        super(HoverButton, self).__init__(master)
+        Label.config(self, text = text, highlightthickness = 0, bd = 0, relief = 'flat', bg = colors[0])
+
+        self.colors = colors
+        self.images = images
+
+        if self.images :
+            self['image'] = self.images.idle
+
+        self.selectable = False
+        self.selected = False
+        self.menuButton = menuButton
 
         self.command = command
 
-        self.selectable = True
-        self.selected = False
-
-        self.defaultImage = icons.idle
-        self.hoverImage = icons.hovered
-        self.clickedImage = icons.clicked
-        self.selectedImage = icons.selected
-
-        self['image'] = self.defaultImage
-
-        self.bind("<Enter>", on_hover)
-        self.bind("<Leave>", on_unhover)
-        self.bind("<Button-1>", on_clicked)
-
-###########################################################
-# FUNCTIONS FOR BUTTONS #---------------------------------#
-
-def on_hover(event):
-    if event.widget.selected == False :
-        event.widget['image'] = event.widget.hoverImage
-
-def on_unhover(event):
-    if event.widget.selected == False :
-        event.widget['image'] = event.widget.defaultImage
-
-def on_clicked(event):
-    event.widget['image'] = event.widget.clickedImage
-    root.update()
-
-    menuButtons = menuFrame.winfo_children()
-
-    for i in menuButtons :
-        if i != event.widget :
-            i['image'] = i.defaultImage
-            i.selected = False
-
-    time.sleep(0.05)
-
-    if event.widget.selectable == True:
-        event.widget.selected = True
-        event.widget['image'] = event.widget.selectedImage
-        root.update()
-    else :
-        event.widget.selected = False
-        root.after(100, on_hover(event))
-
-    event.widget.command()
+        self.bind("<Enter>", self.on_hover)
+        self.bind("<Leave>", self.on_unhover)
+        self.bind("<Button-1>", self.on_clicked)
 
 def remove(event):
     event.grid_remove()
@@ -586,6 +608,8 @@ class contentFrameTemplate(Frame):
         self.moduleRootFrame.grid_rowconfigure(2, weight = 1)
         self.moduleRootFrame.grid_rowconfigure(3, weight = 1)
 
+        self.moduleRootFrame.grid_columnconfigure(0, weight = 1)
+
         ##############################################################
 
         if buffer == True :
@@ -594,238 +618,256 @@ class contentFrameTemplate(Frame):
 
         ##############################################################
 
-
         self.titleFrame = Frame(self.moduleRootFrame, bg = "#FFFFFF")
-        self.titleFrame.grid(row = 1, pady = 8)
+        self.titleFrame.grid(row = 1, column = 0, pady = 8)
+
+        self.titleFrame.grid_columnconfigure(0, weight = 1)
 
         self.titleText = Label(self.titleFrame, font = fontModuleTitle, fg = color_main, bg = "white")
         self.titleText.config(text = moduleName)
         self.titleText.grid(column = 0, row = 0, sticky = 'NEW', pady = 4)
 
         self.horizontalLine = Frame(self.titleFrame, bg = color_secondary, height = 2, bd = 0)
-        self.horizontalLine.grid(column = 0, columnspan = 3, row = 1, sticky = 'NWE', ipadx = 64)
+        self.horizontalLine.grid(column = 0, row = 1, sticky = 'NEWS', ipadx = 64)
 
         ##############################################################
 
         self.middleFrame = Frame(self.moduleRootFrame, bg = "#FFFFFF")
-        self.middleFrame.grid(row = 2)
+        self.middleFrame.grid(row = 2, column = 0, sticky = 'NEWS')
+
+        self.middleFrame.grid_columnconfigure(0, weight = 1)
+        self.middleFrame.grid_rowconfigure(0, weight = 1)
 
         self.descriptionText = Text(self.middleFrame, fg = color_main, bg = "#FFFFFF", font = fontModuleDescription, relief = 'flat', wrap = 'word')
-        self.descriptionText.grid(row = 0, padx = 32, pady = 8)
+        self.descriptionText.pack(fill = "both", expand = True, padx = 32, pady = 8)
+        # self.descriptionText.grid(row = 0, padx = 32, pady = 8)
         self.descriptionText.insert('end', moduleDescription)
 
         newHeight = int(self.descriptionText.index('end-1c').split('.')[0]) + int(descriptionTextHeight)
+
+        # self.descriptionText.bind("<Configure>", resize)
 
         self.descriptionText.config(height = newHeight, state = 'disabled')
 
         self.mainButton = Button(self.middleFrame, image = blankButtonImg, bg = "#FFFFFF", relief = 'flat', compound = 'center', font = fontModuleButton, fg = "#FFFFFF")
         self.mainButton.config(text = button1Text)
-        self.mainButton.grid(row = 1)
+        # self.mainButton.grid(row = 1)
+        self.mainButton.pack()
 
         self.mainButton.config(command = mainFunc)
         root.bind('<Return>',lambda event:mainFunc())
 
         ##############################################################
 
-        self.moduleRootFrame.grid(pady = 8, sticky = 'nesw')
+        self.moduleRootFrame.grid(pady = 8, sticky = 'NEWS')
 
         if customFrame != None :
             # customFrame.config(self.moduleRootFrame)
             customFrame.grid(pady = 4, row = 3)
 
 ###########################################################
-# ICONS CLASS #-------------------------------------------#
+# images CLASS #-------------------------------------------#
 
-class Icons() :
-        idle = '',
-        hovered = '',
-        clicked = '',
-        selected = ''
+class images() :
+        idle = None,
+        hovered = None,
+        clicked = None,
+        selected = None
 
 ###########################################################
 # INITIALIZE BUTTON IMAGES #------------------------------#
 
 if __name__ == '__main__' :
 
-    icons_SelectFolder = Icons()
-    icons_SelectFolder.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_idle.png')
-    icons_SelectFolder.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_hovered.png')
-    icons_SelectFolder.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_clicked.png')
-    icons_SelectFolder.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Browse_selected.png')
+    images_SelectFolder = images()
+    images_SelectFolder.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Browse_idle.png')
+    # images_SelectFolder.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Browse_hovered.png')
+    # images_SelectFolder.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Browse_clicked.png')
+    # images_SelectFolder.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Browse_selected.png')
 
-    icons_SmartName = Icons()
-    icons_SmartName.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_idle.png')
-    icons_SmartName.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_hovered.png')
-    icons_SmartName.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_clicked.png')
-    icons_SmartName.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SmartName_selected.png')
+    images_SmartName = images()
+    images_SmartName.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SmartName_idle.png')
+    # images_SmartName.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SmartName_hovered.png')
+    # images_SmartName.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SmartName_clicked.png')
+    # images_SmartName.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SmartName_selected.png')
 
-    icons_convertCutFiles = Icons()
-    icons_convertCutFiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_idle.png')
-    icons_convertCutFiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_hovered.png')
-    icons_convertCutFiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_clicked.png')
-    icons_convertCutFiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_ConvertCut_selected.png')
+    images_convertCutFiles = images()
+    images_convertCutFiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_ConvertCut_idle.png')
+    # images_convertCutFiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_ConvertCut_hovered.png')
+    # images_convertCutFiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_ConvertCut_clicked.png')
+    # images_convertCutFiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_ConvertCut_selected.png')
 
-    icons_Stickers = Icons()
-    icons_Stickers.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_idle.png')
-    icons_Stickers.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_hovered.png')
-    icons_Stickers.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_clicked.png')
-    icons_Stickers.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Stickers_selected.png')
+    images_Stickers = images()
+    images_Stickers.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Stickers_idle.png')
+    # images_Stickers.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Stickers_hovered.png')
+    # images_Stickers.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Stickers_clicked.png')
+    # images_Stickers.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Stickers_selected.png')
 
-    icons_CeramicTiles = Icons()
-    icons_CeramicTiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_idle.png')
-    icons_CeramicTiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_hovered.png')
-    icons_CeramicTiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_clicked.png')
-    icons_CeramicTiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_CeramicTile_selected.png')
+    images_CeramicTiles = images()
+    images_CeramicTiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_CeramicTile_idle.png')
+    # images_CeramicTiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_CeramicTile_hovered.png')
+    # images_CeramicTiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_CeramicTile_clicked.png')
+    # images_CeramicTiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_CeramicTile_selected.png')
 
-    icons_MetalSigns = Icons()
-    icons_MetalSigns.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_idle.png')
-    icons_MetalSigns.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_hovered.png')
-    icons_MetalSigns.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_clicked.png')
-    icons_MetalSigns.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_MetalSigns_selected.png')
+    images_MetalSigns = images()
+    images_MetalSigns.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_MetalSigns_idle.png')
+    # images_MetalSigns.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_MetalSigns_hovered.png')
+    # images_MetalSigns.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_MetalSigns_clicked.png')
+    # images_MetalSigns.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_MetalSigns_selected.png')
 
-    icons_SplitFiles = Icons()
-    icons_SplitFiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_idle.png')
-    icons_SplitFiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_hovered.png')
-    icons_SplitFiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_clicked.png')
-    icons_SplitFiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_SplitFiles_selected.png')
+    images_SplitFiles = images()
+    images_SplitFiles.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SplitFiles_idle.png')
+    # images_SplitFiles.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SplitFiles_hovered.png')
+    # images_SplitFiles.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SplitFiles_clicked.png')
+    # images_SplitFiles.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_SplitFiles_selected.png')
 
-    icons_Bottlecaps = Icons()
-    icons_Bottlecaps.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_idle.png')
-    icons_Bottlecaps.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_hovered.png')
-    icons_Bottlecaps.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_clicked.png')
-    icons_Bottlecaps.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Bottlecaps_selected.png')
+    images_Bottlecaps = images()
+    images_Bottlecaps.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Bottlecaps_idle.png')
+    # images_Bottlecaps.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Bottlecaps_hovered.png')
+    # images_Bottlecaps.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Bottlecaps_clicked.png')
+    # images_Bottlecaps.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Bottlecaps_selected.png')
 
-    icons_printOS = Icons()
-    icons_printOS.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_idle.png')
-    icons_printOS.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_hovered.png')
-    icons_printOS.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_clicked.png')
-    icons_printOS.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_OpenPrintOS_selected.png')
+    images_printOS = images()
+    images_printOS.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_OpenPrintOS_idle.png')
+    # images_printOS.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_OpenPrintOS_hovered.png')
+    # images_printOS.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_OpenPrintOS_clicked.png')
+    # images_printOS.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_OpenPrintOS_selected.png')
 
-    icons_Settings = Icons()
-    icons_Settings.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_idle.png')
-    icons_Settings.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_hovered.png')
-    icons_Settings.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_clicked.png')
-    icons_Settings.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_Settings_selected.png')
+    images_Settings = images()
+    images_Settings.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Settings_idle.png')
+    # images_Settings.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Settings_hovered.png')
+    # images_Settings.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Settings_clicked.png')
+    # images_Settings.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_Settings_selected.png')
 
-    icons_Downloader = Icons()
-    icons_Downloader.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_idle.png')
-    icons_Downloader.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_hovered.png')
-    icons_Downloader.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_clicked.png')
-    icons_Downloader.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/button_menu_DownloadFiles_selected.png')
+    images_Downloader = images()
+    images_Downloader.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_DownloadFiles_idle.png')
+    # images_Downloader.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_DownloadFiles_hovered.png')
+    # images_Downloader.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_DownloadFiles_clicked.png')
+    # images_Downloader.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/button_menu_DownloadFiles_selected.png')
 
 
-    headerImageRef = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox.png')
+    headerImageRef = PhotoImage(file = scriptPath + '/assets/Buttons3/header_Citrabox.png')
 
-    icons_Header = Icons()
-    icons_Header.idle = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox.png')
-    icons_Header.hovered = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox_hovered.png')
-    icons_Header.clicked = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox_hovered.png')
-    icons_Header.selected = PhotoImage(file = scriptPath + '/assets/Buttons2/header_Citrabox.png')
+    images_Header = images()
+    images_Header.idle = PhotoImage(file = scriptPath + '/assets/Buttons3/header_Citrabox.png')
+    # images_Header.hovered = PhotoImage(file = scriptPath + '/assets/Buttons3/header_Citrabox_hovered.png')
+    # images_Header.clicked = PhotoImage(file = scriptPath + '/assets/Buttons3/header_Citrabox_hovered.png')
+    # images_Header.selected = PhotoImage(file = scriptPath + '/assets/Buttons3/header_Citrabox.png')
 
-    blankButtonImg = PhotoImage(file = scriptPath + '/assets/Buttons2/button_MainFunc_BlankOrange.png')
+    blankButtonImg = PhotoImage(file = scriptPath + '/assets/Buttons3/button_MainFunc_BlankOrange.png')
 
 ###########################################################
 # LOAD WINDOW CONTENT #-----------------------------------#
 
 def LoadWindow() :
+
+    # LEFT FRAME
+
+    leftFrame = Frame(rootFrame, bg = color_main)
+    leftFrame.grid(column = 0, row = 0, sticky = 'NEWS')
     
-    ###########################################################
-    ##### HEADER FRAME #####
-        
-    headerFrame = Frame(rootFrame, bg = color_main, relief = 'flat')
-    headerFrame.grid(column = 0, row = 0, sticky = 'nws')
+    leftFrame.grid_rowconfigure(0, weight = 1)
+    leftFrame.grid_rowconfigure(1, weight = 3)
+    leftFrame.grid_columnconfigure(0, weight = 1)
 
     # headerImage = Label(headerFrame, bg = color_main, image=headerImageRef, bd=0)
     # headerImage.grid(column=0, row=0, sticky='nw')
 
-    headerImage = HoverButton(headerFrame, icons = icons_Header, relief = 'flat')
-    headerImage.grid(column = 0, row = 0, sticky = 'nws')
+    headerImage = HoverButton(leftFrame, images = images_Header, text = None)
+    headerImage.grid(column = 0, row = 0, sticky = 'NEWS')
     headerImage.selectable = False
 
-    ##### END HEADER FRAME #####
-    ###########################################################
-    ##### MENU FRAME #####
+    # MENU FRAME
 
     global menuFrame
-    menuFrame = Frame(rootFrame, relief = 'flat', bg = color_main)
-    menuFrame.grid(column = 0, row = 1, sticky = 'nws', padx = 0, pady = 0, rowspan=3)
+    menuFrame = Frame(leftFrame, relief = 'flat', bg = color_main)
+    menuFrame.grid(column = 0, row = 1, sticky = 'NEWS')
 
-    buttonSelectFolder = HoverButton(menuFrame, icons = icons_SelectFolder, relief = 'flat', command = BrowseForFolder)
-    buttonSelectFolder.pack(padx = 0, pady = 0)
+    buttonSelectFolder = HoverButton(menuFrame, images = images_SelectFolder, command = BrowseForFolder, menuButton = True, colors = ['#E6E7E8', '#F1F2F2', '#BCBEC0'])
+    buttonSelectFolder.pack(fill = 'both', expand = 'yes')
     buttonSelectFolder.selectable = False
 
-    buttonSmartName = HoverButton(menuFrame, icons = icons_SmartName, relief = 'flat', command = SelectSmartName)
-    buttonSmartName.pack(padx = 0, pady = 0)
+    buttonSmartName = HoverButton(menuFrame, images = images_SmartName, command = SelectSmartName, menuButton = True)
+    buttonSmartName.pack(fill = 'both', expand = 'yes')
+    buttonSmartName.selectable = True
 
-    buttonStickers = HoverButton(menuFrame, icons = icons_Stickers, relief = 'flat', command = SelectStickerTool)
-    buttonStickers.pack(padx = 0, pady = 0)
+    buttonStickers = HoverButton(menuFrame, images = images_Stickers, command = SelectStickerTool, menuButton = True)
+    buttonStickers.pack(fill = 'both', expand = 'yes')
+    buttonStickers.selectable = True
 
-    buttonTiles = HoverButton(menuFrame, icons = icons_CeramicTiles, relief = 'flat', command = SelectCeramicTileTool)
-    buttonTiles.pack(padx = 0, pady = 0)
+    buttonTiles = HoverButton(menuFrame, images = images_CeramicTiles, command = SelectCeramicTileTool, menuButton = True)
+    buttonTiles.pack(fill = 'both', expand = 'yes')
+    buttonTiles.selectable = True
 
-    buttonMetal = HoverButton(menuFrame, icons = icons_MetalSigns, relief = 'flat', command = SelectMetalRoundTool)
-    buttonMetal.pack(padx = 0, pady = 0)
+    buttonMetal = HoverButton(menuFrame, images = images_MetalSigns, command = SelectMetalRoundTool, menuButton = True)
+    buttonMetal.pack(fill = 'both', expand = 'yes')
+    buttonMetal.selectable = True
 
-    buttonCaps = HoverButton(menuFrame, icons = icons_Bottlecaps, relief = 'flat', command = SelectBottlecapTool)
-    buttonCaps.pack(padx = 0, pady = 0)
+    buttonCaps = HoverButton(menuFrame, images = images_Bottlecaps, command = SelectBottlecapTool, menuButton = True)
+    buttonCaps.pack(fill = 'both', expand = 'yes')
+    buttonCaps.selectable = True
 
-    buttonSplitFiles = HoverButton(menuFrame, icons = icons_SplitFiles, relief = 'flat', command = SelectRollCalculator)
-    buttonSplitFiles.pack(padx = 0, pady = 0)
+    buttonSplitFiles = HoverButton(menuFrame, images = images_SplitFiles, command = SelectRollCalculator, menuButton = True)
+    buttonSplitFiles.pack(fill = 'both', expand = 'yes')
+    buttonSplitFiles.selectable = True
 
-    # buttonConvertCutFiles = HoverButton(menuFrame, icons = icons_convertCutFiles, relief = 'flat', command = SelectGraphtecConversion)
-    # buttonConvertCutFiles.pack(padx = 0, pady = 0)
+    # buttonConvertCutFiles = HoverButton(menuFrame, images = images_convertCutFiles, relief = 'flat', command = SelectGraphtecConversion)
+    # buttonConvertCutFiles.pack()
 
-    buttonDownloader = HoverButton(menuFrame, icons = icons_Downloader, relief = 'flat', command = SelectDownloader)
-    buttonDownloader.pack(padx = 0, pady = 0)
+    buttonDownloader = HoverButton(menuFrame, images = images_Downloader, command = SelectDownloader, menuButton = True)
+    buttonDownloader.pack(fill = 'both', expand = 'yes')
+    buttonDownloader.selectable = True
 
-    buttonOpenPrintOS = HoverButton(menuFrame, icons = icons_printOS, relief = 'flat', command = SelectPrintOSAdmin)
-    buttonOpenPrintOS.pack(padx = 0, pady = 0)
+    buttonOpenPrintOS = HoverButton(menuFrame, images = images_printOS, command = SelectPrintOSAdmin, menuButton = True)
+    buttonOpenPrintOS.pack(fill = 'both', expand = 'yes')
+    buttonOpenPrintOS.selectable = True
     # buttonOpenPrintOS.selectable = False
 
-    buttonSettings = HoverButton(menuFrame, icons = icons_Settings, relief = 'flat', command = OpenSettings)
-    buttonSettings.pack(padx = 0, pady = 0)
+    buttonSettings = HoverButton(menuFrame, images = images_Settings, command = OpenSettings, menuButton = True)
+    buttonSettings.pack(fill = 'both', expand = 'yes')
+    buttonSettings.selectable = True
 
-    ##### END MENU FRAME #####
-    ###########################################################
-    ##### MAIN CONTENT FRAME #####
+    # MAIN CONTENT FRAME
 
     global mainContentFrame
     mainContentFrame = Frame(rootFrame, bg = "#FFFFFF", relief = 'flat', bd = 0)
-    mainContentFrame.grid(column = 1, row = 0, rowspan = 3, sticky = 'NEW')
+    mainContentFrame.grid(column = 1, row = 0, sticky = 'NEW', ipady = 32)
 
     mainContentFrame.grid_columnconfigure(0, weight = 1)
+    mainContentFrame.grid_rowconfigure(0, weight = 1)
     # mainContentFrame.config(width = 500, height = 846)
 
-    ## STICKER MAIN CONTENT FRAME ##
+    # MAIN FRAME CONTENTS (START UP PAGE)
     
-    stickerFrame = contentFrameTemplate(mainContentFrame, scriptName, scriptVersion, 'Choose a Folder', "Always begin by clicking 'Select Folder' on the left, then choose the folder containing files you'd like to work on. Next, choose a module from the list on the left.", descriptionTextHeight = 1)
+    stickerFrame = contentFrameTemplate(
+        mainContentFrame, 
+        scriptName, 
+        scriptVersion, 
+        'Choose a Folder', 
+        "Always begin by clicking 'Select Folder' on the left, then choose the folder containing files you'd like to work on. Next, choose a module from the list on the left.", 
+        descriptionTextHeight = 1
+    )
 
-    ##### END MAIN CONTENT FRAME #####
-    ###########################################################
-    ##### FOOTER FRAME #####
+    # FOOTER
 
     footerFrame = Frame(rootFrame, bg = color_secondary, relief = 'flat')
-    footerFrame.grid(column = 0, row = 3, columnspan = 3, sticky = 'esw')
-
-    # footerBar = Frame(footerFrame, bg=color_secondary, height=6, bd=0, width=1188+24) #the plus 24 is due to the padding of 12 on slog (see below)
-    # footerBar.pack(fill="x", side='bottom')
+    footerFrame.grid(column = 0, row = 1, columnspan = 3, sticky = 'NEWS')
+    
+    footerFrame.grid_columnconfigure(0, weight = 1)
+    footerFrame.grid_rowconfigure(0, weight = 1)
 
     global footerText
-    footerText = Label(footerFrame, bg = color_secondary, fg = color_main, font = fontModuleDescription, justify = 'center', compound = 'center', width = 152)
+    footerText = Label(footerFrame, bg = color_secondary, fg = color_main, font = fontModuleDescription, justify = 'center')
     global dirSel
     footerText.config(text = "No folder currently selected.")
-    footerText.pack(anchor = 'c', side = 'bottom', ipady = 5)
+    footerText.grid(column = 0, row = 0, sticky = 'NEWS')
 
-    ##### END FOOTER FRAME #####
-    ###########################################################
-    ##### CONSOLE LOG FRAME #####
+    # CONSOLE LOG FRAME
 
     global slog
     slog = initSlog(slogFrame, color_main, color_secondary, fontSlog)
-    slog.configure(width = 50, height = 46)
-    slog.grid(column = 0, row = 0, padx = 8, pady = 8, sticky = 'nsew')
-
-    ##### END CONSOLE LOG FRAME #####
+    slog.configure(width = 48)
+    slog.grid(column = 0, row = 0, ipadx = 16, ipady = 16, sticky = 'NEWS')
 
 ###########################################################
 # FUNCTION - CHANGE MAIN CONTENT #------------------------#
