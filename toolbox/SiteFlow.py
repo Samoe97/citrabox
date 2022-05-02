@@ -89,7 +89,9 @@ def get_jobs_by_order(orderID) :
 def get_subbatch_by_order(orderID) :
     return request_get('/api/order/' + orderID + '/productionstatus')
 
-def get_extra_order_details(orderID) :
+def get_extra_order_details(orderID, filter) :
+    if filter :
+        return request_get('/api/order/details/' + orderID, params = {'includes' : filter})
     return request_get('/api/order/details/' + orderID)
 
 def get_live_subbatches():
@@ -154,7 +156,7 @@ def request_post(path, params='') :
 
 #---------------------------------------------------#
 
-def request_put(path, params='', json='') :
+def request_put(path, params = None, json = None) :
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     url = baseUrl + path
     headers = create_headers("PUT", path, timestamp)

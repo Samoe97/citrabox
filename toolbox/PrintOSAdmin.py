@@ -17,7 +17,7 @@ def pushOrderForward (orderNum) :
     order = SiteFlow.get_order_by_sourceID(orderNum)
     order = json.loads(order.text)
 
-    extraOrderDeets = SiteFlow.get_extra_order_details(order['data'][0]['_id'])
+    extraOrderDeets = SiteFlow.get_extra_order_details(order['data'][0]['_id'], filter = 'batches')
     extraOrderDeets = json.loads(extraOrderDeets.text)
 
     slogPrint(' - Pushing order ' + str(orderNum) + ' to the next queue.')

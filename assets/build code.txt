@@ -7,7 +7,7 @@ py -m PyInstaller -F --noconsole --icon="L:\Scripting\DeltaGizmo\dpg.ico" L:\Scr
 
 MUST IMPORT ALL NEEDED MODULES INSIDE OF MAIN.PY BUT IT WORKS
 
-py -m PyInstaller --name=CitraBox --noconsole --icon="L:\Scripting\ALFRD\assets\CitraBox_Logo_720x720.ico" L:\Scripting\ALFRD\main.py
+py -m PyInstaller --name=CitraBox --noconsole --icon="C:\Users\jfuchs\Documents\GitHub\citrabox\assets\CitraBox_Logo_720x720.ico" C:\Users\jfuchs\Documents\GitHub\citrabox\main.py
 
 py -m PyInstaller --name=Cerberus --noconsole --icon="L:\Scripting\ALFRD\assets\cerberus\cerberus_logo_icon.ico" L:\Scripting\ALFRD\DPGToolbox\Cerberus.py
 

@@ -37,14 +37,14 @@ from pdfrw.buildxobj import pagexobj
 from pdfrw.toreportlab import makerl
 from PyPDF2 import PdfFileReader
 from decimal import Decimal
-import hmac, hashlib, datetime, requests
+import hmac, hashlib, datetime, requests, barcode
 
 ###########################################################
 # CONSTANTS #---------------------------------------------#
 
 scriptName = 'CITRABOX'
 scriptVersion = 'v1.9'
-buildDate = '04/30/22'
+buildDate = '05/01/22'
 
 scriptPath =  os.path.dirname(__file__)
 programIcon = scriptPath + '/assets/CitraBox_Logo_720x720.ico'
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     root = Tk()
     root.title(str(scriptName) + ' - ' + str(scriptVersion) + ' - ' + str(buildDate))
     root.configure(bg = color_main)
-    root.minsize(1120, 864)
+    root.minsize(1300, 864)
 
     root.iconbitmap(programIcon)
 
@@ -98,9 +98,9 @@ if __name__ == '__main__':
     fontModuleDescription = font.Font(family = 'Avenir Medium', size = 12)
     fontSlog = font.Font(family = 'Avenir Light', size = 10)
 
-    rootFrame.grid_columnconfigure(0, weight = 1, minsize = 310)
-    rootFrame.grid_columnconfigure(1, weight = 40, minsize = 800)
-    rootFrame.grid_columnconfigure(2, weight = 1, minsize = 10)
+    rootFrame.grid_columnconfigure(0, weight = 4, minsize = 310)
+    rootFrame.grid_columnconfigure(1, weight = 20, minsize = 600)
+    rootFrame.grid_columnconfigure(2, weight = 8, minsize = 260)
 
     rootFrame.grid_rowconfigure(0, weight = 40, minsize = 800)
     rootFrame.grid_rowconfigure(1, weight = 1, minsize = 32)
@@ -409,6 +409,24 @@ def SelectDownloader():
 
     downloadTicketCheckbox.pack(pady=8, padx=4, side=LEFT, ipadx=8, ipady=4)
 
+
+    global customQuantityBool
+    global customDownloadQty
+
+    customQuantityBool = BooleanVar()
+    def toggleQtyCheckbox() :
+        if customQuantityBool.get() == True :
+            downloadQtyText.config(state = 'normal')
+        else :
+            downloadQtyText.config(state = 'disabled')
+
+    downloadQtyCheckbox = Checkbutton(fileDownloaderFrame, text="Custom Quantity: ", fg=color_main, bg="#FFFFFF", selectcolor="#FFFFFF", onvalue=True, offvalue=False, variable=customQuantityBool, command = toggleQtyCheckbox)
+    downloadQtyCheckbox.pack(padx = 4, pady = 8, side = LEFT, ipadx = 8, ipady = 4)
+
+    customDownloadQty = StringVar()
+    downloadQtyText = Entry(fileDownloaderFrame, width = 6, font=fontModuleDescription, justify='center', state = 'disabled', textvariable = customDownloadQty)
+    downloadQtyText.pack(padx = 4, pady = 8, side = 'left', ipadx = 8, ipady = 4)
+
     #BY ADDING THE "customFrame" ATTRIBUTE TO THIS OBJECT, OUR FRAME WE JUST CREATED ABOVE WILL BE PACKED INTO THE MAIN CONTENT AREA BEFORE THE MAIN CONTENT TEMPLATE
     downloaderFrameInfo = {
         'customFrame' : fileDownloaderFrame,
@@ -424,7 +442,14 @@ def SelectDownloader():
     fileDownloaderFrame.master(newDownloaderFrame)
 
 def ExecuteDownloadSticker():
-    Downloader.downloadSticker(dirSel, downloadOrderText, downloadSkuText, downloadTicketBool)
+    global customQuantityBool
+    global customDownloadQty
+
+    if customQuantityBool.get() == True :
+        customQty = customDownloadQty.get()
+    else :
+        customQty = None
+    Downloader.downloadSticker(dirSel, downloadOrderText, downloadSkuText, downloadTicketBool, customQty = customQty)
 
 ###########################################################
 # FUNCTIONS - PRINTOS TOOL #------------------------------#
@@ -866,8 +891,8 @@ def LoadWindow() :
 
     global slog
     slog = initSlog(slogFrame, color_main, color_secondary, fontSlog)
-    slog.configure(width = 48)
-    slog.grid(column = 0, row = 0, ipadx = 16, ipady = 16, sticky = 'NEWS')
+    slog.configure(width = 56)
+    slog.grid(column = 0, row = 0, padx = 16, pady = 16, sticky = 'NEWS')
 
 ###########################################################
 # FUNCTION - CHANGE MAIN CONTENT #------------------------#

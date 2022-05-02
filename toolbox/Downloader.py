@@ -6,7 +6,7 @@ import toolbox.Renamer2 as Renamer2
 from toolbox.sLog import slogPrint
 # import toolboxGUI2 as GUI
 
-def downloadSticker(directory, downloadOrderText, downloadSkuText, downloadTicketBool):
+def downloadSticker(directory, downloadOrderText, downloadSkuText, downloadTicketBool, customQty = None):
 
     if directory == '' :
         slogPrint(' - ERROR: No download location selected.')
@@ -24,9 +24,9 @@ def downloadSticker(directory, downloadOrderText, downloadSkuText, downloadTicke
     #     return
 
     slogPrint(' - Starting download. Please wait...')
-    get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTicketBool)
+    get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTicketBool, customQty = customQty)
 
-def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTicketBool):
+def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTicketBool, customQty = None):
     downloadSkuText.delete(0, len(downloadSkuText.get()))
     index = 0
     downloadQueue = []
@@ -61,6 +61,10 @@ def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTi
                 newFile = SiteFlow.download_file(newFileID)
                 infotechIndex = orderData["files"].index(newFileID) - 1
                 newFileName = Renamer.ItemBuilderFileID(newFileID)
+
+                if customQty != None :
+                    newFileName.quantity = customQty
+                        
                 newFileName = Renamer.MakeNameFromItem(newFileName, 'PRINT')
                 saveDest = directory + '/' + newFileName
                 content = urllib.request.urlopen(newFile.text)
@@ -88,6 +92,10 @@ def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTi
         for d in downloadQueue :
                         newFile = SiteFlow.download_file(d)
                         newFileName = Renamer2.ItemBuilderFileID(d)
+
+                        if customQty != None :
+                            newFileName.quantity = customQty
+                            
                         newFileName = Renamer2.MakeNameFromItem(newFileName, directory, 'PRINT')
 
                         saveDest = newFileName
@@ -126,6 +134,10 @@ def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTi
 
                         newFile = SiteFlow.download_file(newFileID)
                         newFileName = Renamer2.ItemBuilderFileID(newFileID)
+
+                        if customQty != None :
+                            newFileName.quantity = customQty
+
                         newFileName = Renamer2.MakeNameFromItem(newFileName, directory, 'PRINT')
 
                         saveDest = newFileName
@@ -153,6 +165,10 @@ def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTi
                 newFile = SiteFlow.download_file(newFileID)
                 infotechIndex = orderData["files"].index(newFileID) - 1
                 newFileName = Renamer.ItemBuilderFileID(newFileID)
+
+                if customQty != None :
+                    newFileName.quantity = customQty
+
                 newFileName = Renamer.MakeNameFromItem(newFileName, 'PRINT')
                 saveDest = directory + '/' + newFileName
                 content = urllib.request.urlopen(newFile.text)
