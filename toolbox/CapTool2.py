@@ -292,16 +292,16 @@ def capSheetGen50up(directory, allPrintPDFs) :
 
         itemSpecs = Renamer.fileNameParser(file)
 
-        if itemSpecs['sku'] != 'White' :
+        # if itemSpecs['sku'] != 'White' :
 
-            app = hookPhotoshop()
-            destination = directory + '/' + file
+            # app = hookPhotoshop()
+            # destination = directory + '/' + file
 
-            app.Open(destination)
-            app.DoAction("Sample underprint white test 1", "To add White Underprint")
+            # app.Open(destination)
+            # app.DoAction("Sample underprint white test 1", "To add White Underprint")
 
-            arguments = [app.ActiveDocument, destination]
-            app.DoJavaScriptFile(jsSave, arguments)
+            # arguments = [app.ActiveDocument, destination]
+            # app.DoJavaScriptFile(jsSave, arguments)
 
         qty = itemSpecs['quantity']
 
