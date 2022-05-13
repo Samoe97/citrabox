@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     # ROLL CALCULATOR PARAMS
     rollLength = IntVar()
-    rollLength.set(1640)
+    rollLength.set(1580)
 
 ###########################################################
 # FUNCTION - BROWSE FOR FOLDER #--------------------------#
@@ -458,11 +458,15 @@ def SelectPrintOSAdmin():
 
     # INITIALIZE FILE DOWNLOADER FRAME - CUSTOM FRAME TO INSERT INTO THE MAIN CONTENT TEMPLATE
     global orderPrintOS
+    global itemSku
 
     printOSAdminFrame = Frame(mainContentFrame, relief = 'flat', bg = "#FFFFFF")
 
     orderPrintOSLabel = Label(printOSAdminFrame, font=fontModuleDescription, text='Order: ', justify='right', bg = "#FFFFFF")
     orderPrintOS = Entry(printOSAdminFrame, width = 9, font=fontModuleDescription, justify='center')
+
+    # itemSkuLabel = Label(printOSAdminFrame, font=fontModuleDescription, text='Sku: ', justify='right', bg = "#FFFFFF")
+    # itemSku = Entry(printOSAdminFrame, width = 9, font=fontModuleDescription, justify='center')
 
     # Convenient settings for download panel - bind "ENTER" to dowload and set the text cursor to active in the order field
     root.bind('<Return>',lambda event:executePushOrderForward())
@@ -470,6 +474,9 @@ def SelectPrintOSAdmin():
 
     orderPrintOSLabel.pack(pady=8, padx=4, side=LEFT)
     orderPrintOS.pack(pady=8, padx=4, side=LEFT, ipadx=8, ipady=4)
+
+    # itemSkuLabel.pack(pady = 8, padx = 4, side = LEFT)
+    # itemSku.pack(pady = 8, padx = 4, side = LEFT, ipadx = 8, ipady = 4)
 
     #BY ADDING THE "customFrame" ATTRIBUTE TO THIS OBJECT, OUR FRAME WE JUST CREATED ABOVE WILL BE PACKED INTO THE MAIN CONTENT AREA BEFORE THE MAIN CONTENT TEMPLATE
     printOSFrameInfo = {
@@ -482,6 +489,11 @@ def SelectPrintOSAdmin():
         'moduleDescriptionTextHeight' : 4,
     }
     ChangeMainContentFrame(printOSFrameInfo)
+
+def downloadInfotech() :
+    orderNum = orderPrintOS.get()
+    sku = itemSku.get()
+    PrintOS.downloadInfotech(orderNum, sku)
 
 def executePushOrderForward() :
     orderNum = orderPrintOS.get()
@@ -858,7 +870,7 @@ def LoadWindow() :
     mainContentFrame = Frame(rootFrame, bg = "#FFFFFF", relief = 'flat', bd = 0)
     mainContentFrame.grid(column = 1, row = 0, sticky = 'NEW', ipady = 32)
 
-    mainContentFrame.grid_columnconfigure(0, weight = 1)
+    mainContentFrame.grid_columnconfigure(0, weight = 1, minsize = 800)
     mainContentFrame.grid_rowconfigure(0, weight = 1)
     # mainContentFrame.config(width = 500, height = 846)
 
@@ -869,7 +881,8 @@ def LoadWindow() :
         scriptName, 
         scriptVersion, 
         'Choose a Folder', 
-        "Always begin by clicking 'Select Folder' on the left, then choose the folder containing files you'd like to work on. Next, choose a module from the list on the left.", 
+        "Begin by clicking 'Select Folder' on the left, then choose the folder containing files you'd like to work on. Next, choose a module from the list on the left.",
+        mainFunc = BrowseForFolder, 
         descriptionTextHeight = 1
     )
 

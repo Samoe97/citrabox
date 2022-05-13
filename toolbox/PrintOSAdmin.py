@@ -31,3 +31,16 @@ def pushOrderForward (orderNum) :
             slogPrint(' ---- Moved batch ' + str(i['mainBatchNumber']) + ' to SHIPPING.')
 
     slogPrint(' - Finished pushing order ' + str(orderNum) + ' to the next queue.')
+
+def downloadInfotech(orderNum, sku) :
+
+    order = SiteFlow.get_order_by_sourceID(orderNum)
+    order = json.loads(order.text)
+
+    extraOrderDeets = SiteFlow.get_extra_order_details(order['data'][0]['_id'], filter = 'files')
+    extraOrderDeets = json.loads(extraOrderDeets.text)
+
+    slogPrint(' - Downloading ticket for ' + str(orderNum) + ' || ' + str(sku))
+
+    for i in extraOrderDeets['order']['orderData']['items'] :
+        print()
