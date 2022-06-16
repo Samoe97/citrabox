@@ -35,7 +35,7 @@ def processLength(params):
         return
         
     dirCheck = params['Directory']
-    slogPrint(' ---- Separating print files into rolls ----')
+    slogPrint(' ---- Separating print files into rolls ---- ')
     for file in os.listdir(dirCheck):
         if file.endswith('.pdf'):
             f = open(dirCheck + '/' + file, 'rb')
@@ -45,7 +45,6 @@ def processLength(params):
             f.close()
             splitRolls(dirCheck, length, file, params['maxRollLength'])
             
-    slogPrint('------------------------------------------------------')
     slogPrint(' ---- Success! ' + str(rollIndex) + ' rolls are ready to print. ----')
     rollIndex = 1
     totalLength = 0

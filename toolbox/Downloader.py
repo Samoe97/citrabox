@@ -101,8 +101,11 @@ def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTi
                         saveDest = newFileName
                         content = urllib.request.urlopen(newFile.text)
 
-                        if index >= 1 :
-                            saveDest = saveDest[:-4] + '-' + str(index) + '.pdf'
+                        fileName = newFileName.split('/')
+                        fileName = fileName[len(fileName) - 1]
+
+                        # if index >= 1 :
+                        #     saveDest = saveDest[:-4] + '-' + str(index) + '.pdf'
 
                         f = open(saveDest, 'wb')
                         f.write(content.read())
@@ -114,7 +117,7 @@ def get_item_by_Order_and_SKU(directory, order, sku, downloadSkuText, downloadTi
                         infotechIndex = orderData["files"].index(d) - 1
                         if downloadTicketBool.get() == 1 :
                             newFile = SiteFlow.download_file(orderData["files"][infotechIndex])
-                            newFileName = newFileName[:-10] + '_TICKET.pdf'
+                            newFileName = fileName[:-10] + '_TICKET.pdf'
                             saveDest = directory + '/' + newFileName
                             content = urllib.request.urlopen(newFile.text)
                             f = open(saveDest, 'wb')

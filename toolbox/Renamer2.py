@@ -90,7 +90,10 @@ def CheckForSpotColors(item, backLabel) :
 def CheckForDuplicates(item, newFilePath, index, backLabel='') :
     if os.path.exists(directory + '/' + newFilePath) == True:
         if item.type == 'Cap' :
-            item.sku = '_' + str(index)
+            if index > 1 :
+                item.options = item.options[:-2] + '_' + str(index)
+            else :
+                item.options = item.options + '_' + str(index)
             newFilePath = RenameFile(item, directory, backLabel=backLabel, duplicateCheck=False, rename=False, spotColorCheck=False)
             index += 1
             CheckForDuplicates(item, newFilePath, index)
@@ -213,6 +216,24 @@ def ItemBuilderSticker(barcode, orderData, subbatch, bypassSubbatch = False, ite
 
             orderNumber = orderData["orderData"]["sourceOrderId"]
 
+            if str(j['components'][0]['attributes']['Catfish_ME_Canvas']) == 'True' :
+                
+                sku = j['components'][0]['attributes']['Customer_SKU']
+
+                # CREATE ITEM
+                item = NewItem()
+                item.filePath = filePath
+                item.barcode = barcode
+                item.order = orderNumber
+                item.sku = sku
+                item.type = 'Sticker'
+                item.width = '1'
+                item.height = '1'
+                item.quantity = j["printQuantity"]
+                item.options = ''
+
+                return item
+
             # CHECK FOR DYNAMIC CANVAS
             if str(j["components"][0]["attributes"]["Catfish_ME_Canvas"][0:7]) == 'Dynamic' :
                 width = str(j["components"][0]["attributes"]["Catfish_ME_Canvas"][8:9])
@@ -334,41 +355,42 @@ def ItemBuilderMetal(barcode, orderData, subbatch, bypassSubbatch=False, itemInd
 
         return item
 
-    if subbatch["productName"].__contains__("Landscape") :
-        for j in orderData["orderData"]["items"] :
+    # if subbatch["productName"].__contains__("Landscape") :
+    #     for j in orderData["orderData"]["items"] :
             # if j["productId"] == subbatch['productId']:
-            if j['components'][0]['_id'] == subbatch['batchedBy']['componentId'] :
+            
+            # if j['components'][0]['_id'] == subbatch['batchedBy']['componentId'] :
                 
-                global directory
-                for file in os.listdir(directory) :
-                    if file.__contains__(barcode) :
-                        filePath = file
+            #     global directory
+            #     for file in os.listdir(directory) :
+            #         if file.__contains__(barcode) :
+            #             filePath = file
 
-                orderNumber = orderData["orderData"]["sourceOrderId"]
-                productType = 'MetalLandscape'
+            #     orderNumber = orderData["orderData"]["sourceOrderId"]
+            #     productType = 'MetalLandscape'
 
-                sku = j["components"][0]["attributes"]["Customer_SKU"]
-                if sku == True :
-                    sku = 'NoSKU'
-                elif sku.find('/') != -1 :
-                    sku = sku.split('/')
-                    sku = sku[0] + sku[1]
+            #     sku = j["components"][0]["attributes"]["Customer_SKU"]
+            #     if sku == True :
+            #         sku = 'NoSKU'
+            #     elif sku.find('/') != -1 :
+            #         sku = sku.split('/')
+            #         sku = sku[0] + sku[1]
 
-                slogPrint(' - Processing Metal Sign: ' + orderNumber + ' | ' + sku + ' (Barcode ' + barcode + ')')
+            #     slogPrint(' - Processing Metal Sign: ' + orderNumber + ' | ' + sku + ' (Barcode ' + barcode + ')')
 
-                # CREATE ITEM
-                item = NewItem()
-                item.filePath = filePath
-                item.barcode = barcode
-                item.order = orderNumber
-                item.sku = sku
-                item.type = productType
-                item.quantity = j["printQuantity"]
-                item.options = ''
+            #     # CREATE ITEM
+            #     item = NewItem()
+            #     item.filePath = filePath
+            #     item.barcode = barcode
+            #     item.order = orderNumber
+            #     item.sku = sku
+            #     item.type = productType
+            #     item.quantity = j["printQuantity"]
+            #     item.options = ''
 
-                return item
+            #     return item
 
-    elif subbatch['productName'].__contains__('SIGN_001 Metal Sign') :
+    if subbatch['productName'].__contains__('SIGN_001') :
 
         orderSubbatches = SiteFlow.get_subbatch_by_order(orderData['_id'])
         orderSubbatches = json.loads(orderSubbatches.text)
