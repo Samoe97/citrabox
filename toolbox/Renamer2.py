@@ -139,6 +139,8 @@ def RenameFile(item, directory1, backLabel='', rename = True, duplicateCheck = T
         newFile = 'ROUND_' + str(item.order) + '_' + str(item.sku) + '_qty ' + str(item.quantity) + '_' + backLabel + '.pdf'
     elif item.type == 'MetalLandscape' :
         newFile = 'METAL_' + str(item.order) + '_' + str(item.sku) + '_qty ' + str(item.quantity) + '_13x11.5_' + backLabel + '.pdf'
+    elif item.type == 'Acrylic' :
+        newFile = 'AM_' + str(item.order) + '_' + str(item.sku) + '_' + str(item.options) + '_qty ' + str(item.quantity) + '_PRINT.pdf'
 
     if duplicateCheck == True :
         newFile = CheckForDuplicates(item, newFile, 1, backLabel)
@@ -280,6 +282,38 @@ def ItemBuilderSticker(barcode, orderData, subbatch, bypassSubbatch = False, ite
             item.type = productType
             item.width = width
             item.height = height
+            item.quantity = j["printQuantity"]
+            item.options = options
+
+            return item
+
+def ItemBuilderAcrylic(barcode, orderData, subbatch) :
+
+    for j in orderData['orderData']['items'] :
+
+        if j['components'][0]['_id'] == subbatch['batchedBy']['componentId'] :
+
+            global directory
+            for file in os.listdir(directory) :
+                if file.__contains__(barcode) :
+                    filePath = file
+
+            orderNumber = orderData['orderData']['sourceOrderId']
+            productType = 'Acrylic'
+
+            sku = j["components"][0]["attributes"]["Customer_SKU"]
+            
+            options = j['productDescription'].split('_')[2]
+
+            slogPrint(' - Processing Acrylic: ' + orderNumber + ' | ' + sku + ' (Barcode ' + barcode + ')')
+
+            # CREATE ITEM
+            item = NewItem()
+            item.filePath = filePath
+            item.barcode = barcode
+            item.order = orderNumber
+            item.sku = sku
+            item.type = productType
             item.quantity = j["printQuantity"]
             item.options = options
 
@@ -568,6 +602,9 @@ def fileNameParser(filename):
     elif filename.startswith('ROUND') :
         orderNumber = filename.split('_')[1]
         skuNumber = filename.split('_')[2]
+    elif filename.startswith('AM') :
+        orderNumber = filename.split('_')[1]
+        skuNumber = filename.split('_')[2]
     else:
         orderNumber = filename[0:5]
         skuNumber = filename[6:12]
@@ -656,6 +693,9 @@ def ParseFolder(params) :
             totalItems.append(item)
         elif subbatch['productName'].__contains__('Metal') :
             item = ItemBuilderMetal(i, orderData, subbatch)
+            totalItems.append(item)
+        elif subbatch['productName'].__contains__('Acrylic') :
+            item = ItemBuilderAcrylic(i, orderData, subbatch)
             totalItems.append(item)
         elif subbatch['batchedBy']['substrate'].__contains__('Magnet') :
             item = ItemBuilderSticker(i, orderData, subbatch)
